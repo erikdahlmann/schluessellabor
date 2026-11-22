@@ -47,7 +47,7 @@ export const EXPERIMENTS = [
     teaser: 'Kreis- und ebene Wellen, Reflexion, Beugung und Interferenz an der Wasseroberfläche.' },
   { id: 'fadenstrahlrohr', field: 'wellen-felder', title: 'Fadenstrahlrohr', tech: '3d', status: 'bereit',
     teaser: 'Elektronen auf der Kreisbahn im Helmholtz-Feld – Bestimmung der spezifischen Ladung e/m.' },
-  { id: 'doppelspalt', field: 'wellen-felder', title: 'Doppelspalt', tech: '2d', status: 'geplant',
+  { id: 'doppelspalt', field: 'wellen-felder', title: 'Doppelspalt', tech: '2d', status: 'bereit',
     teaser: 'Interferenz von Laserlicht – Wellenlängenbestimmung aus dem Streifenmuster.' },
   { id: 'gitter', field: 'wellen-felder', title: 'Gitter', tech: '2d', status: 'geplant',
     teaser: 'Scharfe Maxima am optischen Gitter, Spektren weißen Lichts.' },
@@ -57,7 +57,7 @@ export const EXPERIMENTS = [
     teaser: 'Teilchenbeschleunigung durch Wechselfeld und Magnetfeld (Modellexperiment).' },
 
   // --- Quantenobjekte -------------------------------------------------------
-  { id: 'photoeffekt', field: 'quanten', title: 'Photoeffekt', tech: '2d', status: 'geplant',
+  { id: 'photoeffekt', field: 'quanten', title: 'Photoeffekt', tech: '2d', status: 'bereit',
     teaser: 'Gegenfeldmethode mit Fotozelle – Bestimmung des Planck’schen Wirkungsquantums.' },
   { id: 'elektronen-doppelspalt', field: 'quanten', title: 'Doppelspaltversuch mit Elektronen', short: 'Elektronen-Doppelspalt', tech: '2d', status: 'geplant',
     teaser: 'Einzelne Elektronen bauen ein Interferenzmuster auf – Wahrscheinlichkeitsdeutung.' },
@@ -89,7 +89,7 @@ export const EXPERIMENTS = [
     teaser: 'Metallsalze färben die Flamme charakteristisch – Spektroskopie im Alltag.' },
   { id: 'linienspektren', field: 'strahlung', title: 'Linienspektren bzw. Spektralanalyse', short: 'Linienspektren', tech: '2d', status: 'geplant',
     teaser: 'Spektrallampen am Gitter – Energieniveaus aus Spektrallinien.' },
-  { id: 'franck-hertz', field: 'strahlung', title: 'Franck-Hertz-Versuch', tech: '2d', status: 'geplant',
+  { id: 'franck-hertz', field: 'strahlung', title: 'Franck-Hertz-Versuch', tech: '2d', status: 'bereit',
     teaser: 'Diskrete Energieabgabe von Elektronen an Quecksilber- oder Neonatome.' },
   { id: 'sonnenspektrum', field: 'strahlung', title: 'Sonnenspektrum, Fraunhofer’sche Linien', short: 'Sonnenspektrum', tech: '2d', status: 'geplant',
     teaser: 'Dunkle Absorptionslinien verraten die Elemente der Sonnenatmosphäre.' },
