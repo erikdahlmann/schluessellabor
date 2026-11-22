@@ -4,7 +4,7 @@
 //  mit Schlitzgewichten, Maßstab, Ultraschall-Bewegungssensor + Interface.
 //  Physik: m_eff·ÿ = −D·y − b·ẏ  mit  m_eff = m + m_F/3  (reale Feder hat Masse)
 // ============================================================================
-import { createLab, mats, makeDisplay, cable, powerSupply } from '../js/lib/lab3d.js';
+import { viewHost } from '../js/lib/views.js';
 
 const G = 9.81;
 const SPRINGS = [
@@ -104,7 +104,7 @@ export default {
 <p>Kinetische Energie und Spannenergie (bezogen auf die Ruhelage) wandeln sich periodisch ineinander um: <i>E = ½·D·ŷ²</i>.</p>
 <h3>Modellgrenzen dieser Simulation</h3>
 <ul><li>Federkonstanten weichen wie bei echten Federn um bis zu ±4 % vom Nennwert ab.</li>
-<li>Ultraschallsensor: Auflösung ca. 0,3 mm (Rauschen), Abtastung wählbar. Die Federmasse ist realistisch berücksichtigt; per Häkchen lässt sich eine ideale, masselose Feder einstellen.</li></ul>`,
+<li>Ultraschallsensor: Auflösung ca. 0,3 mm (Rauschen), Abtastung wählbar. Die Federmasse ist realistisch berücksichtigt; per Häkchen lässt sich eine ideale, masselose Feder einstellen.</li></ul><h3>Was die Modellansicht zeigt</h3><ul><li><b>Kraftpfeile:</b> Federkraft (nach oben) und Gewichtskraft (nach unten). Ihre Summe ist die rücktreibende Kraft <i>F = −D·y</i>; sie zeigt immer zur Ruhelage und ist umso größer, je weiter der Körper ausgelenkt ist.</li><li><b>Energiebalken:</b> Bewegungsenergie und Spannenergie (bezogen auf die Ruhelage) wandeln sich ineinander um, die Summe bleibt ohne Dämpfung gleich.</li><li><b>Zeigerdiagramm:</b> Ein Zeiger der Länge ŷ läuft gleichförmig mit ω um. Seine Projektion ist genau die Auslenkung y(t) – so entsteht die Sinuskurve.</li></ul>`,
     geraet: `
 <table class="spec"><tbody>
 <tr><td>Stativ</td><td>Stange 1 m, Ø 12 mm; Querstange 25 cm</td></tr>
@@ -125,76 +125,26 @@ export default {
 
   async mount({ stage, controls, messwerte, ui, Chart, csvTools, fit }) {
     const { el, group, slider, selectBox, check, button, fmt, gauss, dataTable, toast, display } = ui;
-    const lab = await createLab(stage, { cam: [1.12, 0.78, 1.42], target: [0.22, 0.5, 0], table: [6, 3], bloom: [0.3, 0.4, 0.97], room: 1, maxDist: 3 });
-    const { THREE, scene } = lab; const M = mats(THREE);
-    stage.insertAdjacentHTML('beforeend', '<div class="hint">Drehen: ziehen · Zoom: Mausrad · Pendelkörper anfassen und nach unten ziehen</div>');
-
-    // ---------------- Aufbau ----------------
-    const HX = 0.2; // x-Position der Aufhängung
-    const base = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.022, 0.17), new THREE.MeshStandardMaterial({ color: 0x2f4a6b, roughness: 0.5, metalness: 0.3 }));
-    base.position.set(0.02, 0.011, 0); base.castShadow = base.receiveShadow = true; scene.add(base);
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const f = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.004, 12), M.black); f.position.set(0.02 + sx * 0.11, 0.002, sz * 0.07); scene.add(f); }
-    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 1.0, 24), M.steel); rod.position.set(0, 0.52, 0); rod.castShadow = true; scene.add(rod);
-    const muff = new THREE.Group();
-    const mb = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.05, 0.035), new THREE.MeshStandardMaterial({ color: 0x6b7075, metalness: 0.8, roughness: 0.35 })); muff.add(mb);
-    for (const [x, z, ry] of [[0, 0.028, 0], [0.028, 0, Math.PI / 2]]) {
-      const sc = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.02, 8), M.steel); sc.rotation.x = Math.PI / 2; sc.position.set(x, 0, z); sc.rotation.y = ry; muff.add(sc);
-      const kb = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.006, 16), M.knob); kb.rotation.x = Math.PI / 2; kb.position.set(x * 1.5, 0, z * 1.5); kb.rotation.y = ry; muff.add(kb);
-    }
-    muff.position.set(0, Y_HOOK + 0.02, 0); muff.castShadow = true; scene.add(muff);
-    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.27, 20), M.steel); arm.rotation.z = Math.PI / 2; arm.position.set(0.12, Y_HOOK + 0.02, 0); arm.castShadow = true; scene.add(arm);
-    const hook = new THREE.Mesh(new THREE.TorusGeometry(0.007, 0.0016, 8, 20, Math.PI * 1.5), M.steel); hook.position.set(HX, Y_HOOK + 0.007, 0); hook.rotation.z = Math.PI * 0.75; scene.add(hook);
-    // Maßstab (0 cm in Höhe des Hakens)
-    const rSide = new THREE.MeshStandardMaterial({ color: 0x9a968c, roughness: 0.9 });
-    const ruler = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.9, 0.004), [rSide, rSide, rSide, rSide, new THREE.MeshStandardMaterial({ map: rulerTexture(THREE), roughness: 0.85, color: 0xcfcac0 }), rSide]);
-    ruler.position.set(HX + 0.05, Y_HOOK - 0.45, -0.035); ruler.castShadow = true; scene.add(ruler);
-    const rHold = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, 0.035), M.steel); rHold.position.set(HX + 0.05, Y_HOOK + 0.012, -0.018); scene.add(rHold);
-    // Ultraschallsensor
-    const sensor = new THREE.Group();
-    const sb = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.04, 0.06), new THREE.MeshStandardMaterial({ color: 0x1f4fb8, roughness: 0.45 })); sb.position.y = 0.02; sb.castShadow = true; sensor.add(sb);
-    const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.019, 0.019, 0.008, 32), new THREE.MeshStandardMaterial({ color: 0xb59a52, metalness: 0.9, roughness: 0.55 })); tr.position.y = 0.044; sensor.add(tr);
-    const mesh = new THREE.Mesh(new THREE.CircleGeometry(0.016, 32), new THREE.MeshStandardMaterial({ color: 0x222, roughness: 0.9 })); mesh.rotation.x = -Math.PI / 2; mesh.position.y = 0.0485; sensor.add(mesh);
-    const sLed = new THREE.Mesh(new THREE.SphereGeometry(0.0025, 10, 10), new THREE.MeshBasicMaterial({ color: 0x113311 })); sLed.position.set(0.028, 0.03, 0.031); sensor.add(sLed);
-    sensor.position.set(HX, 0, 0); scene.add(sensor);
-    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.06, 1, 32, 1, true), new THREE.MeshBasicMaterial({ color: 0x86dcff, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
-    cone.rotation.x = Math.PI; scene.add(cone);
-    // Interface
-    const iface = powerSupply(THREE, { w: 0.2, h: 0.09, d: 0.15, label: 'Messinterface · Ultraschall', displays: 1, knobs: 0, sockets: ['yellow', 'black'], color: 'light', dispColor: ['#b7ffd6', '#0b1410'] });
-    iface.position.set(0.5, 0, 0.02); iface.rotation.y = -0.45; scene.add(iface);
-    iface.updateMatrixWorld(true);
-    scene.add(cable(THREE, new THREE.Vector3(HX + 0.04, 0.02, 0), iface.socketWorld(0), 0x161616, 0.0));
-
-    // ---------------- Pendelkörper ----------------
-    const body = new THREE.Group(); scene.add(body);
-    const hangerRod = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, HANGER - 0.008, 12), M.steel); hangerRod.position.y = -(HANGER - 0.008) / 2 - 0.008; body.add(hangerRod);
-    const hHook = new THREE.Mesh(new THREE.TorusGeometry(0.006, 0.0014, 8, 18), M.steel); hHook.position.y = -0.005; body.add(hHook);
-    const hBase = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.006, 40), M.brass); hBase.position.y = -HANGER + 0.003; hBase.castShadow = true; body.add(hBase);
-    const discGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.0052, 40);
-    const discMat = new THREE.MeshStandardMaterial({ color: 0x8d9398, metalness: 0.9, roughness: 0.35 });
-    const discs = []; for (let i = 0; i < 9; i++) { const d = new THREE.Mesh(discGeo, discMat); d.position.y = -HANGER + 0.006 + 0.0028 + i * 0.0054; d.castShadow = true; d.visible = false; body.add(d); discs.push(d); }
-    const pickables = [hangerRod, hBase, ...discs];
 
     // ---------------- Zustand ----------------
-    const S = { spring: SPRINGS[1], m: 0.2, ideal: false, damp: 'luft', y: 0, v: 0, held: false, rec: false, t: 0, dtS: 0.02, dur: 10, d0: null, data: [] };
-    let springMesh = null;
+    const S = { spring: SPRINGS[1], m: 0.2, ideal: false, damp: 'luft', y: 0, v: 0, held: false, rec: false, t: 0, dtS: 0.02, dur: 10, d0: null, data: [], ver: 0 };
     const Dreal = () => S.spring.D * TOL[S.spring.id];
     const meff = () => S.m + (S.ideal ? 0 : S.spring.mF / 3);
     const s0 = () => S.m * G / Dreal();
-    function buildSpring() { if (springMesh) { scene.remove(springMesh); springMesh.dispose(); } springMesh = makeSpring(THREE, S.spring); springMesh.position.set(HX, Y_HOOK, 0); scene.add(springMesh); }
-    function setDiscs() { const n = Math.round(S.m / 0.05) - 1; discs.forEach((d, i) => { d.visible = i < n; }); }
+    const omega = () => Math.sqrt(Dreal() / meff());
     const yBottom = () => Y_HOOK - 0.01 - (S.spring.L0 + s0() + S.y) - 0.012 - HANGER;
+    const clampY = y => Math.max(-s0() * 0.9, Math.min(Math.min(0.1, s0() * 0.9), y));
 
     // ---------------- Bedienfeld ----------------
     const gF = group('Feder und Pendelkörper');
-    const sSpring = selectBox({ label: 'Schraubenfeder', value: 'B', options: SPRINGS.map(s => ({ value: s.id, label: `${s.name} (D ≈ ${s.D} N/m)` })), onChange: v => { S.spring = SPRINGS.find(s => s.id === v); clampMass(); buildSpring(); rest(); } });
-    const sMass = slider({ label: 'Masse m (Haken + Schlitzgewichte)', min: 50, max: 500, step: 50, value: 200, unit: 'g', onInput: v => { S.m = v / 1000; clampMass(); setDiscs(); rest(); } });
+    const sSpring = selectBox({ label: 'Schraubenfeder', value: 'B', options: SPRINGS.map(s => ({ value: s.id, label: `${s.name} (D ≈ ${s.D} N/m)` })), onChange: v => { S.spring = SPRINGS.find(s => s.id === v); clampMass(); S.ver++; rest(); } });
+    const sMass = slider({ label: 'Masse m (Haken + Schlitzgewichte)', min: 50, max: 500, step: 50, value: 200, unit: 'g', onInput: v => { S.m = v / 1000; clampMass(); S.ver++; rest(); } });
     const cIdeal = check({ label: 'Ideale Feder (masselos)', onChange: v => { S.ideal = v; } });
-    const sDamp = selectBox({ label: 'Dämpfung', value: 'luft', options: [{ value: 'luft', label: 'gering (Luftreibung)' }, { value: 'pappe', label: 'mittel (Pappscheibe)' }, { value: 'wasser', label: 'stark (Pendelkörper im Wasser)' }], onChange: v => { S.damp = v; } });
+    const sDamp = selectBox({ label: 'Dämpfung', value: 'luft', options: [{ value: 'luft', label: 'gering (Luftreibung)' }, { value: 'pappe', label: 'mittel (Pappscheibe)' }, { value: 'wasser', label: 'stark (Pendelkörper im Wasser)' }], onChange: v => { S.damp = v; S.ver++; } });
     gF.append(sSpring, sMass, cIdeal, sDamp);
     function clampMass() {
       const max = Math.floor(S.spring.Fmax / G / 0.05) * 0.05;
       if (S.m > max + 1e-9) { S.m = max; sMass.set(Math.round(max * 1000)); toast(`${S.spring.name}: höchstens ${Math.round(max * 1000)} g, sonst wird die Feder überdehnt.`); }
-      setDiscs();
     }
     const gA = group('Auslenkung');
     const sAmp = slider({ label: 'Auslenkung nach unten', min: 0.5, max: 8, step: 0.5, value: 4, unit: 'cm', digits: 1 });
@@ -208,8 +158,8 @@ export default {
     gM.append(sDt, sDur, el('div', { class: 'bar' }, bRec, button('Nullpunkt setzen', () => { S.d0 = measureD(); toast('Ruhelage als Nullpunkt gespeichert.'); })));
     const gH = group('Handmessung');
     gH.append(el('p', { class: 'muted', style: 'font-size:13px;margin:0 0 8px' }, 'Stoppuhr über 10 Perioden – mit menschlicher Reaktionszeit.'), button('Stoppuhr: 10 Perioden', () => stopwatch()));
-    const dD = display('Abstand Sensor'), dY = display('Auslenkung y'), dR = display('Unterkante am Maßstab');
-    const gL = group('Live-Werte'); gL.append(dD, dY, dR);
+    const dD = display('Abstand Sensor'), dY = display('Auslenkung y'), dR = display('Unterkante am Maßstab'), dTth = display('T (Theorie, Nennwert)');
+    const gL = group('Live-Werte'); gL.append(dD, dY, dR, dTth);
     controls.append(gF, gA, gM, gH, gL);
 
     // ---------------- Messwerte-Panel ----------------
@@ -236,13 +186,9 @@ export default {
       el('div', { class: 'chartbox' }, el('h4', {}, el('span', {}, 'Messreihe'), segT), figT, resT,
         csvTools(() => ({ meta: ['Federpendel – Messreihe Periodendauer'], columns: [{ key: 'meth', label: 'Methode' }, { key: 'feder', label: 'Feder' }, { key: 'D', label: 'D Nennwert in N/m' }, { key: 'm', label: 'm in kg' }, { key: 'T', label: 'T in s' }, { key: 'sT', label: 'Delta T in s' }, { key: 'A', label: 'Amplitude in m' }], rows }), 'federpendel_messreihe'))),
       el('div', { style: 'height:14px' }), tbl);
-
-    function drawY() {
-      chY.set([{ points: S.data.map(p => [p[0], p[2] * 100]), color: '#86dcff' }]);
-    }
+    function drawY() { chY.set([{ points: S.data.map(p => [p[0], p[2] * 100]), color: '#86dcff' }]); }
     function drawT() {
-      const sel = rows.filter(r => !r._bad);
-      const feds = [...new Set(sel.map(r => r.feder))];
+      const sel = rows.filter(r => !r._bad); const feds = [...new Set(sel.map(r => r.feder))];
       const cols = { A: '#86dcff', B: '#f2ac74', C: '#ab93ff', D: '#7fd6a0' };
       let series, fits = [], txt = '';
       if (tView === 'T2') {
@@ -273,10 +219,9 @@ export default {
     function startRec() {
       if (S.d0 == null) S.d0 = yBottom() - SENSOR_TOP + S.y;
       S.rec = true; S.t = 0; S.data = []; lastT = null; bRec.textContent = 'Messung stoppen'; gM.led(true);
-      sLed.material.color.set(0x3dff6a); cone.material.opacity = 0.05;
     }
     function stopRec() {
-      S.rec = false; bRec.textContent = 'Messung starten'; gM.led(false); sLed.material.color.set(0x113311); cone.material.opacity = 0;
+      S.rec = false; bRec.textContent = 'Messung starten'; gM.led(false);
       const Ts = fit.periodsFromSignal(S.data.map(p => p[0]), S.data.map(p => p[2]));
       const amp = S.data.length ? Math.max(...S.data.map(p => Math.abs(p[2]))) : 0;
       if (Ts.length >= 2 && amp > 0.002) {
@@ -287,43 +232,231 @@ export default {
       drawY();
     }
     function stopwatch() {
-      const w = Math.sqrt(Dreal() / meff());
+      const w = omega();
       if (Math.abs(S.y) < 0.004 && Math.abs(S.v) < 0.02) { toast('Das Pendel ruht – erst auslenken.'); return; }
-      const T10 = 10 * 2 * Math.PI / w + gauss(0.12) + 0.06;
-      const T = T10 / 10;
+      const T10 = 10 * 2 * Math.PI / w + gauss(0.12) + 0.06, T = T10 / 10;
       rows.push({ meth: 'Stoppuhr', feder: S.spring.id, D: S.spring.D, m: S.m, T, sT: 0.15 / 10, A: Math.hypot(S.y, S.v / w) });
       tbl.render(rows); drawT(); toast(`Stoppuhr: 10 T = ${fmt(T10, 2)} s → T = ${fmt(T, 3)} s`);
     }
     function rest() { S.y = 0; S.v = 0; if (!S.rec) S.d0 = null; }
 
-    // ---------------- Ziehen mit der Maus ----------------
-    const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(), plane = new THREE.Plane(), hit = new THREE.Vector3();
-    let dragOff = 0;
-    const cvs = lab.renderer.domElement;
-    function setPtr(e) { const r = cvs.getBoundingClientRect(); ptr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ptr, lab.camera); }
-    function onDown(e) {
-      setPtr(e); const h = ray.intersectObjects(pickables, false)[0]; if (!h) return;
-      S.held = true; lab.controls.enabled = false; cvs.setPointerCapture(e.pointerId);
-      const n = new THREE.Vector3().subVectors(lab.camera.position, h.point).setY(0).normalize();
-      plane.setFromNormalAndCoplanarPoint(n, h.point); dragOff = h.point.y + S.y; cvs.style.cursor = 'grabbing';
+    // ---------------- Modell-Overlay (beide Ansichten): Energie und Zeigerdiagramm ----------------
+    const ov = el('div', { class: 'ov', style: 'right:12px;top:56px;width:230px', hidden: true });
+    ov.innerHTML = `<h5>Energie (bezogen auf die Ruhelage)</h5>
+      <svg viewBox="0 0 210 92" width="100%" style="display:block"><g id="fpE"></g></svg>
+      <h5 style="margin-top:8px">Zeigerdiagramm: y = ŷ·cos(ω·t)</h5>
+      <svg viewBox="0 0 210 110" width="100%" style="display:block">
+        <circle id="fpCirc" cx="52" cy="55" r="40" fill="none" stroke="#4a545c"/>
+        <line x1="52" y1="10" x2="52" y2="100" stroke="#323a42"/><line x1="8" y1="55" x2="96" y2="55" stroke="#323a42"/>
+        <line id="fpPtr" x1="52" y1="55" stroke="#f2ac74" stroke-width="2.4"/>
+        <line id="fpProj" stroke="#86dcff" stroke-dasharray="3 3"/>
+        <circle id="fpDot" r="3.5" fill="#86dcff"/>
+        <polyline id="fpTrace" fill="none" stroke="#86dcff" stroke-width="1.6"/>
+        <text x="104" y="106" fill="#8e979d" font-size="9">t →</text><text x="40" y="9" fill="#8e979d" font-size="9">y↓</text>
+      </svg>`;
+    stage.append(ov);
+    const qo = id => ov.querySelector('#' + id); const trace = [];
+    function drawOverlay(dt) {
+      const D = Dreal(), m = meff(), w = omega();
+      const Ek = 0.5 * m * S.v * S.v, Ep = 0.5 * D * S.y * S.y, Es = Ek + Ep;
+      const Emax = Math.max(0.5 * D * 0.08 * 0.08, Es, 1e-6) * 1.05;
+      const bar = (i, val, col, name) => { const h = val / Emax * 64; return `<rect x="${10 + i * 68}" y="${72 - h}" width="40" height="${h.toFixed(1)}" rx="3" fill="${col}"/><text x="${30 + i * 68}" y="86" fill="#c7c1b7" font-size="10" text-anchor="middle">${name}</text>`; };
+      qo('fpE').innerHTML = bar(0, Ek, '#86dcff', 'E_kin') + bar(1, Ep, '#f2ac74', 'E_pot') + bar(2, Es, '#ab93ff', 'Summe') + `<line x1="4" y1="72" x2="206" y2="72" stroke="#4a545c"/>`;
+      const A = Math.hypot(S.y, S.v / w), R = 40, phi = Math.atan2(-S.v / w, S.y); // y = A cos(φ)
+      const sc = A > 1e-4 ? R / Math.max(A, 0.02) : 0;
+      const px = 52 + Math.sin(phi) * A * sc, py = 55 + Math.cos(phi) * A * sc; // y nach unten
+      qo('fpCirc').setAttribute('r', (A * sc).toFixed(1));
+      const p = qo('fpPtr'); p.setAttribute('x2', px.toFixed(1)); p.setAttribute('y2', py.toFixed(1));
+      const pr = qo('fpProj'); pr.setAttribute('x1', px.toFixed(1)); pr.setAttribute('y1', py.toFixed(1)); pr.setAttribute('x2', 104); pr.setAttribute('y2', py.toFixed(1));
+      qo('fpDot').setAttribute('cx', 104); qo('fpDot').setAttribute('cy', py.toFixed(1));
+      trace.unshift(py); if (trace.length > 100) trace.pop();
+      qo('fpTrace').setAttribute('points', trace.map((y, i) => `${104 + i},${y.toFixed(1)}`).join(' '));
     }
-    function onMove(e) {
-      if (!S.held) { setPtr(e); cvs.style.cursor = ray.intersectObjects(pickables, false).length ? 'grab' : ''; return; }
-      setPtr(e); if (ray.ray.intersectPlane(plane, hit)) { S.y = Math.max(-s0() * 0.9, Math.min(Math.min(0.1, s0() * 0.9), dragOff - hit.y)); S.v = 0; }
-    }
-    function onUp() { if (!S.held) return; S.held = false; lab.controls.enabled = true; cvs.style.cursor = ''; }
-    cvs.addEventListener('pointerdown', onDown); cvs.addEventListener('pointermove', onMove); window.addEventListener('pointerup', onUp);
 
-    // ---------------- Simulation ----------------
-    buildSpring(); setDiscs();
-    const disp = iface.displays[0];
-    let redrawAcc = 0;
-    const off = lab.onFrame(dt => {
-      const h = 0.0005; let n = Math.round(dt / h);
+    // ---------------- Ansicht 3D ----------------
+    async function view3d(box, MM) {
+      const { createLab, mats, cable, powerSupply, arrow, label } = await import('../js/lib/lab3d.js');
+      const lab = await createLab(box, { cam: [0.62, 0.66, 0.92], target: [0.2, 0.52, 0], table: [6, 3], bloom: [0.3, 0.4, 0.97], room: 1, maxDist: 3 });
+      const { THREE, scene } = lab; const M = mats(THREE);
+      box.insertAdjacentHTML('beforeend', '<div class="hint">Drehen: ziehen · Zoom: Mausrad · Pendelkörper anfassen und nach unten ziehen</div>');
+      const HX = 0.2;
+      const base = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.022, 0.17), new THREE.MeshStandardMaterial({ color: 0x2f4a6b, roughness: 0.5, metalness: 0.3 }));
+      base.position.set(0.02, 0.011, 0); base.castShadow = base.receiveShadow = true; scene.add(base);
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const f = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.004, 12), M.black); f.position.set(0.02 + sx * 0.11, 0.002, sz * 0.07); scene.add(f); }
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 1.0, 24), M.steel); rod.position.set(0, 0.52, 0); rod.castShadow = true; scene.add(rod);
+      const muff = new THREE.Group();
+      muff.add(new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.05, 0.035), new THREE.MeshStandardMaterial({ color: 0x6b7075, metalness: 0.8, roughness: 0.35 })));
+      for (const [x, z, ry] of [[0, 0.028, 0], [0.028, 0, Math.PI / 2]]) {
+        const kb = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.006, 16), M.knob); kb.rotation.x = Math.PI / 2; kb.position.set(x * 1.5, 0, z * 1.5); kb.rotation.y = ry; muff.add(kb);
+      }
+      muff.position.set(0, Y_HOOK + 0.02, 0); scene.add(muff);
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.27, 20), M.steel); arm.rotation.z = Math.PI / 2; arm.position.set(0.12, Y_HOOK + 0.02, 0); arm.castShadow = true; scene.add(arm);
+      const hook = new THREE.Mesh(new THREE.TorusGeometry(0.007, 0.0016, 8, 20, Math.PI * 1.5), M.steel); hook.position.set(HX, Y_HOOK + 0.007, 0); hook.rotation.z = Math.PI * 0.75; scene.add(hook);
+      const rSide = new THREE.MeshStandardMaterial({ color: 0x9a968c, roughness: 0.9 });
+      const ruler = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.9, 0.004), [rSide, rSide, rSide, rSide, new THREE.MeshStandardMaterial({ map: rulerTexture(THREE), roughness: 0.85, color: 0xcfcac0 }), rSide]);
+      ruler.position.set(HX + 0.05, Y_HOOK - 0.45, -0.035); ruler.castShadow = true; scene.add(ruler);
+      const sensor = new THREE.Group();
+      const sb = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.04, 0.06), new THREE.MeshStandardMaterial({ color: 0x1f4fb8, roughness: 0.45 })); sb.position.y = 0.02; sb.castShadow = true; sensor.add(sb);
+      const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.019, 0.019, 0.008, 32), new THREE.MeshStandardMaterial({ color: 0xb59a52, metalness: 0.9, roughness: 0.55 })); tr.position.y = 0.044; sensor.add(tr);
+      const sLed = new THREE.Mesh(new THREE.SphereGeometry(0.0025, 10, 10), new THREE.MeshBasicMaterial({ color: 0x113311 })); sLed.position.set(0.028, 0.03, 0.031); sensor.add(sLed);
+      sensor.position.set(HX, 0, 0); scene.add(sensor);
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(0.06, 1, 32, 1, true), new THREE.MeshBasicMaterial({ color: 0x86dcff, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+      cone.rotation.x = Math.PI; scene.add(cone);
+      const iface = powerSupply(THREE, { w: 0.2, h: 0.09, d: 0.15, label: 'Messinterface · Ultraschall', displays: 1, knobs: 0, sockets: ['yellow', 'black'], color: 'light', dispColor: ['#b7ffd6', '#0b1410'] });
+      iface.position.set(0.5, 0, 0.02); iface.rotation.y = -0.45; scene.add(iface); iface.updateMatrixWorld(true);
+      scene.add(cable(THREE, new THREE.Vector3(HX + 0.04, 0.02, 0), iface.socketWorld(0), 0x161616, 0.0));
+      const body = new THREE.Group(); scene.add(body);
+      const hangerRod = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, HANGER - 0.008, 12), M.steel); hangerRod.position.y = -(HANGER - 0.008) / 2 - 0.008; body.add(hangerRod);
+      const hHook = new THREE.Mesh(new THREE.TorusGeometry(0.006, 0.0014, 8, 18), M.steel); hHook.position.y = -0.005; body.add(hHook);
+      const hBase = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.006, 40), M.brass); hBase.position.y = -HANGER + 0.003; hBase.castShadow = true; body.add(hBase);
+      const discGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.0052, 40), discMat = new THREE.MeshStandardMaterial({ color: 0x8d9398, metalness: 0.9, roughness: 0.35 });
+      const discs = []; for (let i = 0; i < 9; i++) { const d = new THREE.Mesh(discGeo, discMat); d.position.y = -HANGER + 0.0088 + i * 0.0054; d.castShadow = true; d.visible = false; body.add(d); discs.push(d); }
+      const pickables = [hangerRod, hBase, ...discs];
+      // Modell: Kräfte, Geschwindigkeit, Ruhelage
+      const aFF = arrow(THREE, 0xf2ac74, { radius: 0.003, head: 0.018 }), aFG = arrow(THREE, 0x6fa8ff, { radius: 0.003, head: 0.018 }), aFR = arrow(THREE, 0xff4b3e, { radius: 0.004, head: 0.022 }), aV = arrow(THREE, 0x5fe0ff, { radius: 0.0025, head: 0.016 });
+      const lFF = label(THREE, 'F_Feder', { color: '#f2ac74', size: 0.022 }), lFG = label(THREE, 'F_G', { color: '#8cb8ff', size: 0.022 }), lFR = label(THREE, 'F_res', { color: '#ff7a6a', size: 0.022 }), lV = label(THREE, 'v', { color: '#5fe0ff', size: 0.022 });
+      const restM = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.0015), new THREE.MeshBasicMaterial({ color: 0xab93ff, transparent: true, opacity: 0.8, toneMapped: false }));
+      const lRest = label(THREE, 'Ruhelage', { color: '#c7b6ff', size: 0.018 });
+      const modelG = new THREE.Group(); modelG.add(aFF, aFG, aFR, aV, lFF, lFG, lFR, lV, restM, lRest); scene.add(modelG);
+      let springMesh = null, sv = -1, lastSpring = null;
+      // Ziehen mit der Maus
+      const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(), plane = new THREE.Plane(), hit = new THREE.Vector3(); let dragOff = 0;
+      const cvs = lab.renderer.domElement;
+      const setPtr = e => { const r = cvs.getBoundingClientRect(); ptr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ptr, lab.camera); };
+      const onDown = e => { setPtr(e); const h = ray.intersectObjects(pickables, false)[0]; if (!h) return; S.held = true; lab.controls.enabled = false; cvs.setPointerCapture(e.pointerId); const n = new THREE.Vector3().subVectors(lab.camera.position, h.point).setY(0).normalize(); plane.setFromNormalAndCoplanarPoint(n, h.point); dragOff = h.point.y + S.y; cvs.style.cursor = 'grabbing'; };
+      const onMove = e => { setPtr(e); if (!S.held) { cvs.style.cursor = ray.intersectObjects(pickables, false).length ? 'grab' : ''; return; } if (ray.ray.intersectPlane(plane, hit)) { S.y = clampY(dragOff - hit.y); S.v = 0; } };
+      const onUp = () => { if (!S.held) return; S.held = false; lab.controls.enabled = true; cvs.style.cursor = ''; };
+      cvs.addEventListener('pointerdown', onDown); cvs.addEventListener('pointermove', onMove); window.addEventListener('pointerup', onUp);
+      const disp = iface.displays[0];
+      const off = lab.onFrame(() => {
+        if (sv !== S.ver || lastSpring !== S.spring) {
+          sv = S.ver;
+          if (lastSpring !== S.spring) { if (springMesh) { scene.remove(springMesh); springMesh.dispose(); } springMesh = makeSpring(THREE, S.spring); springMesh.position.set(HX, Y_HOOK, 0); scene.add(springMesh); lastSpring = S.spring; }
+          const n = Math.round(S.m / 0.05) - 1; discs.forEach((d, i) => { d.visible = i < n; });
+        }
+        const L = S.spring.L0 + s0() + S.y; springMesh.update(L);
+        const by = Y_HOOK - 0.01 - L - 0.012; body.position.set(HX, by, 0);
+        const d = yBottom() - SENSOR_TOP;
+        cone.scale.set(1, d, 1); cone.position.set(HX, SENSOR_TOP + d / 2, 0); cone.material.opacity = S.rec ? 0.05 : 0; sLed.material.color.set(S.rec ? 0x3dff6a : 0x113311);
+        disp.draw(fmt(d, 3), 'm');
+        modelG.visible = MM.model;
+        if (MM.model) {
+          const D = Dreal(), m = S.m, k = 0.06; // 1 N ≙ 6 cm
+          const cy = by - HANGER * 0.55, x0 = HX - 0.045;
+          const FF = D * (s0() + S.y), FG = m * G, FR = FG - FF - DAMP[S.damp] * S.v; // nach unten positiv
+          aFF.set(new THREE.Vector3(x0, cy, 0.03), new THREE.Vector3(0, FF * k, 0)); lFF.position.set(x0 - 0.05, cy + FF * k + 0.012, 0.03);
+          aFG.set(new THREE.Vector3(x0 + 0.012, cy, 0.03), new THREE.Vector3(0, -FG * k, 0)); lFG.position.set(x0 - 0.035, cy - FG * k - 0.012, 0.03);
+          aFR.set(new THREE.Vector3(HX + 0.045, cy, 0.03), new THREE.Vector3(0, -FR * k * 2, 0)); lFR.position.set(HX + 0.085, cy - FR * k * 2, 0.03); aFR.visible = lFR.visible = Math.abs(FR) > 0.01;
+          aV.set(new THREE.Vector3(HX + 0.075, cy, 0.03), new THREE.Vector3(0, -S.v * 0.25, 0)); lV.position.set(HX + 0.105, cy - S.v * 0.25, 0.03); aV.visible = lV.visible = Math.abs(S.v) > 0.01;
+          restM.position.set(HX, Y_HOOK - 0.01 - (S.spring.L0 + s0()) - 0.012 - HANGER * 0.55, 0.031); lRest.position.set(HX - 0.12, restM.position.y, 0.031);
+        }
+      });
+      return { destroy() { off(); cvs.removeEventListener('pointerdown', onDown); cvs.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); springMesh?.dispose(); lab.dispose(); } };
+    }
+
+    // ---------------- Ansicht 2D (Seitenansicht, maßstäblich) ----------------
+    async function view2d(box, MM) {
+      const SC = 560, Yp = y => 600 - y * SC, HXp = 360;
+      box.insertAdjacentHTML('beforeend', `
+<svg viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans, system-ui, sans-serif" role="img" aria-label="Federpendel in Seitenansicht mit Stativ, Feder, Pendelkörper, Maßstab und Ultraschallsensor">
+<defs>
+  <linearGradient id="fpBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#14181b"/><stop offset="1" stop-color="#0b0d0f"/></linearGradient>
+  <linearGradient id="fpSteel" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6c7378"/><stop offset=".45" stop-color="#e6e8ea"/><stop offset="1" stop-color="#6c7378"/></linearGradient>
+  <linearGradient id="fpDisc" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5d6367"/><stop offset=".4" stop-color="#c9ced2"/><stop offset="1" stop-color="#5d6367"/></linearGradient>
+  <marker id="fpA1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#f2ac74"/></marker>
+  <marker id="fpA2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#6fa8ff"/></marker>
+  <marker id="fpA3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#ff4b3e"/></marker>
+  <marker id="fpA4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#5fe0ff"/></marker>
+</defs>
+<rect width="1000" height="620" fill="url(#fpBg)"/>
+<rect x="0" y="600" width="1000" height="20" fill="#24282b"/>
+<rect x="${HXp - 0.2 * SC - 60}" y="588" width="150" height="12" rx="2" fill="#2f4a6b"/>
+<rect x="${HXp - 0.2 * SC - 3.5}" y="${Yp(1.02)}" width="7" height="${1.02 * SC - 12}" fill="url(#fpSteel)"/>
+<rect x="${HXp - 0.2 * SC - 3.5}" y="${Yp(Y_HOOK + 0.02) - 3}" width="${0.2 * SC + 12}" height="6" fill="url(#fpSteel)"/>
+<rect x="${HXp - 0.2 * SC - 12}" y="${Yp(Y_HOOK + 0.02) - 14}" width="24" height="28" rx="3" fill="#6b7075"/>
+<!-- Maßstab -->
+<g transform="translate(${HXp + 0.05 * SC} ${Yp(Y_HOOK)})">
+  <rect x="-1" y="0" width="22" height="${0.9 * SC}" fill="#e8e3d6" stroke="#9c968a"/>
+  ${Array.from({ length: 91 }, (_, i) => `<rect x="0" y="${(i / 100 * SC).toFixed(1)}" width="${i % 10 === 0 ? 12 : i % 5 === 0 ? 8 : 4}" height="1" fill="#222"/>${i % 10 === 0 && i ? `<text x="20" y="${(i / 100 * SC + 3).toFixed(1)}" font-size="9" fill="#222" text-anchor="end">${i}</text>` : ''}`).join('')}
+</g>
+<path id="fpSpring" fill="none" stroke="#d6dadd" stroke-width="2.2" stroke-linejoin="round"/>
+<g id="fpBody"></g>
+<!-- Sensor -->
+<rect x="${HXp - 21}" y="${Yp(0.04)}" width="42" height="${0.04 * SC}" rx="3" fill="#1f4fb8"/><rect x="${HXp - 11}" y="${Yp(0.048)}" width="22" height="5" fill="#b59a52"/>
+<circle id="fpLed" cx="${HXp + 14}" cy="${Yp(0.025)}" r="2.4" fill="#113311"/>
+<g id="fpWaves" fill="none" stroke="#86dcff" stroke-width="1.4"></g>
+<text x="${HXp + 30}" y="${Yp(0.02)}" fill="#8e979d" font-size="11">Ultraschallsensor</text>
+<!-- Modell -->
+<g id="fpModel" opacity="0">
+  <line id="fpRest" stroke="#ab93ff" stroke-dasharray="6 5" stroke-width="1.4"/><text id="fpRestT" fill="#c7b6ff" font-size="12">Ruhelage</text>
+  <line id="fpFF" stroke="#f2ac74" stroke-width="4" marker-end="url(#fpA1)"/><text id="fpFFt" fill="#f2ac74" font-size="13" font-weight="600">F_Feder</text>
+  <line id="fpFG" stroke="#6fa8ff" stroke-width="4" marker-end="url(#fpA2)"/><text id="fpFGt" fill="#8cb8ff" font-size="13" font-weight="600">F_G</text>
+  <line id="fpFR" stroke="#ff4b3e" stroke-width="5" marker-end="url(#fpA3)"/><text id="fpFRt" fill="#ff7a6a" font-size="13" font-weight="600">F_res = −D·y</text>
+  <line id="fpV" stroke="#5fe0ff" stroke-width="3" marker-end="url(#fpA4)"/><text id="fpVt" fill="#5fe0ff" font-size="13" font-weight="600">v</text>
+  <line id="fpY" stroke="#ece6dc" stroke-width="1.2"/><text id="fpYt" fill="#ece6dc" font-size="12">y</text>
+</g>
+<text x="24" y="34" fill="#8e979d" font-size="13">Seitenansicht (maßstäblich) · Pendelkörper mit der Maus ziehen</text>
+</svg>`);
+      const svg = box.querySelector('svg'); const q = id => svg.querySelector('#' + id);
+      const toY = e => { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()).y; };
+      let drag = null;
+      q('fpBody').style.cursor = 'grab';
+      q('fpBody').addEventListener('pointerdown', e => { drag = toY(e) / SC - S.y; svg.setPointerCapture(e.pointerId); S.held = true; });
+      svg.addEventListener('pointermove', e => { if (drag == null) return; S.y = clampY(toY(e) / SC - drag); S.v = 0; });
+      svg.addEventListener('pointerup', () => { drag = null; S.held = false; });
+      let raf = 0, wavePh = 0, last = performance.now();
+      function frame(now) {
+        raf = requestAnimationFrame(frame); const dt = Math.min(0.05, (now - last) / 1000); last = now;
+        const L = S.spring.L0 + s0() + S.y, top = Y_HOOK - 0.01, bot = top - L;
+        // Feder als Zickzack mit Windungszahl der echten Feder (gedrittelt für Lesbarkeit)
+        const n = Math.round(S.spring.turns / 2), w = S.spring.R * SC * 1.1; let d = `M${HXp} ${Yp(Y_HOOK)} L${HXp} ${Yp(top)}`;
+        for (let i = 0; i <= n * 2; i++) d += ` L${(HXp + (i === 0 || i === n * 2 ? 0 : (i % 2 ? w : -w))).toFixed(1)} ${Yp(top - L * i / (n * 2)).toFixed(1)}`;
+        d += ` L${HXp} ${Yp(bot - 0.012)}`; q('fpSpring').setAttribute('d', d);
+        const by = bot - 0.012, nd = Math.round(S.m / 0.05) - 1;
+        let b = `<rect x="${HXp - 1.5}" y="${Yp(by)}" width="3" height="${(HANGER - 0.006) * SC}" fill="#c9ced2"/><rect x="${HXp - 0.02 * SC}" y="${Yp(by - HANGER + 0.006)}" width="${0.04 * SC}" height="${0.006 * SC}" fill="#c8a24a"/>`;
+        for (let i = 0; i < nd; i++) b += `<rect x="${HXp - 0.02 * SC}" y="${Yp(by - HANGER + 0.006 + (i + 1) * 0.0054)}" width="${0.04 * SC}" height="${0.0052 * SC}" rx="1" fill="url(#fpDisc)" stroke="#2a2e31" stroke-width=".5"/>`;
+        b += `<rect x="${HXp - 0.03 * SC}" y="${Yp(by + 0.01)}" width="${0.06 * SC}" height="${(HANGER + 0.02) * SC}" fill="transparent"/>`;
+        q('fpBody').innerHTML = b;
+        q('fpLed').setAttribute('fill', S.rec ? '#3dff6a' : '#113311');
+        const yb = yBottom();
+        if (S.rec) { wavePh = (wavePh + dt * 1.6) % 1; let h = ''; for (let k = 0; k < 3; k++) { const f = (wavePh + k / 3) % 1, yy = SENSOR_TOP + f * (yb - SENSOR_TOP); h += `<path d="M${HXp - 16} ${Yp(yy)} Q${HXp} ${Yp(yy) - 7} ${HXp + 16} ${Yp(yy)}" opacity="${(1 - f).toFixed(2)}"/>`; } q('fpWaves').innerHTML = h; } else q('fpWaves').innerHTML = '';
+        // Modell
+        q('fpModel').setAttribute('opacity', MM.model ? 1 : 0);
+        if (MM.model) {
+          const D = Dreal(), k = 0.06 * SC, cy = by - HANGER * 0.55;
+          const FF = D * (s0() + S.y), FG = S.m * G, FR = FG - FF - DAMP[S.damp] * S.v;
+          const line = (id, x, y1, y2) => { const l = q(id); l.setAttribute('x1', x); l.setAttribute('x2', x); l.setAttribute('y1', y1); l.setAttribute('y2', y2); };
+          const xL = HXp - 46, xR = HXp + 46;
+          line('fpFF', xL, Yp(cy), Yp(cy) - FF * k); q('fpFFt').setAttribute('x', xL - 70); q('fpFFt').setAttribute('y', Yp(cy) - FF * k + 4);
+          line('fpFG', xL - 14, Yp(cy), Yp(cy) + FG * k); q('fpFGt').setAttribute('x', xL - 46); q('fpFGt').setAttribute('y', Yp(cy) + FG * k + 14);
+          const showR = Math.abs(FR) > 0.01; q('fpFR').style.display = q('fpFRt').style.display = showR ? '' : 'none';
+          line('fpFR', xR, Yp(cy), Yp(cy) + FR * k * 2); q('fpFRt').setAttribute('x', xR + 10); q('fpFRt').setAttribute('y', Yp(cy) + FR * k * 2 + 4);
+          const showV = Math.abs(S.v) > 0.01; q('fpV').style.display = q('fpVt').style.display = showV ? '' : 'none';
+          line('fpV', xR + 30, Yp(cy), Yp(cy) + S.v * 0.25 * SC); q('fpVt').setAttribute('x', xR + 38); q('fpVt').setAttribute('y', Yp(cy) + S.v * 0.25 * SC);
+          const restY = Yp(cy - S.y);
+          const r = q('fpRest'); r.setAttribute('x1', HXp - 150); r.setAttribute('x2', HXp + 150); r.setAttribute('y1', restY); r.setAttribute('y2', restY);
+          q('fpRestT').setAttribute('x', HXp - 220); q('fpRestT').setAttribute('y', restY + 4);
+          line('fpY', HXp + 128, restY, Yp(cy)); q('fpYt').setAttribute('x', HXp + 134); q('fpYt').setAttribute('y', (restY + Yp(cy)) / 2 + 4);
+          q('fpY').style.display = q('fpYt').style.display = Math.abs(S.y) > 0.003 ? '' : 'none';
+        }
+      }
+      raf = requestAnimationFrame(frame);
+      return { destroy() { cancelAnimationFrame(raf); } };
+    }
+
+    const host = viewHost(stage, { id: 'federpendel', views: { '3d': view3d, '2d': view2d }, initial: '3d', modelInfo: 'Kräfte, Energie und Zeiger' });
+    host.onModel(on => { ov.hidden = !on; });
+
+    // ---------------- Hauptschleife: Physik (RK4) und Messung ----------------
+    let raf = 0, last = performance.now(), redrawAcc = 0;
+    function loop(now) {
+      raf = requestAnimationFrame(loop);
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      const h = 0.0005, n = Math.round(dt / h);
       const D = Dreal(), m = meff(), b = DAMP[S.damp];
       const acc = (y, v) => (-D * y - b * v) / m;
       for (let i = 0; i < n; i++) {
-        if (!S.held) { // RK4
+        if (!S.held) {
           const k1y = S.v, k1v = acc(S.y, S.v);
           const k2y = S.v + h / 2 * k1v, k2v = acc(S.y + h / 2 * k1y, S.v + h / 2 * k1v);
           const k3y = S.v + h / 2 * k2v, k3v = acc(S.y + h / 2 * k2y, S.v + h / 2 * k2v);
@@ -331,29 +464,18 @@ export default {
           S.y += h / 6 * (k1y + 2 * k2y + 2 * k3y + k4y); S.v += h / 6 * (k1v + 2 * k2v + 2 * k3v + k4v);
         }
         if (S.rec) {
-          const tn = S.t + h; const kPrev = Math.floor(S.t / S.dtS + 1e-9), kNow = Math.floor(tn / S.dtS + 1e-9);
-          S.t = tn;
+          const tn = S.t + h; const kPrev = Math.floor(S.t / S.dtS + 1e-9), kNow = Math.floor(tn / S.dtS + 1e-9); S.t = tn;
           if (kNow > kPrev || S.data.length === 0) { const d = measureD(); S.data.push([+(kNow * S.dtS).toFixed(4), d, S.d0 - d]); }
           if (S.t >= S.dur) { stopRec(); break; }
         }
       }
-      // Visualisierung
-      const L = S.spring.L0 + s0() + S.y;
-      springMesh.update(L);
-      body.position.set(HX, Y_HOOK - 0.01 - L - 0.012, 0);
       const d = yBottom() - SENSOR_TOP;
-      cone.scale.set(1, d, 1); cone.position.set(HX, SENSOR_TOP + d / 2, 0);
-      disp.draw(fmt(d, 3), 'm');
       dD.set(`${fmt(d * 100, 1)} cm`); dY.set(S.d0 == null ? '– (Nullpunkt?)' : `${fmt((S.d0 - d) * 100, 1)} cm`);
-      dR.set(`${fmt((Y_HOOK - yBottom()) * 100, 1)} cm`);
+      dR.set(`${fmt((Y_HOOK - yBottom()) * 100, 1)} cm`); dTth.set(`${fmt(2 * Math.PI * Math.sqrt(S.m / S.spring.D), 3)} s`);
+      if (!ov.hidden) drawOverlay(dt);
       redrawAcc += dt; if (S.rec && redrawAcc > 0.2) { redrawAcc = 0; drawY(); }
-    });
-
-    return {
-      destroy() {
-        off(); cvs.removeEventListener('pointerdown', onDown); cvs.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp);
-        chY.destroy(); chT.destroy(); springMesh?.dispose(); lab.dispose();
-      }
-    };
+    }
+    raf = requestAnimationFrame(loop);
+    return { destroy() { cancelAnimationFrame(raf); host.destroy(); chY.destroy(); chT.destroy(); } };
   }
 };

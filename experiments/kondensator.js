@@ -3,6 +3,7 @@
 //  2D-Aufbau (SVG): Netzgerät – Rastersteckplatte mit STE-Bausteinen –
 //  Sensor-Interface (Spannung parallel zu C, Strom in Reihe).
 // ============================================================================
+import { viewHost } from '../js/lib/views.js';
 const R_VALUES = [1e3, 2.2e3, 4.7e3, 10e3, 22e3, 47e3, 100e3];
 const C_VALUES = [100e-6, 220e-6, 470e-6, 1000e-6, 2200e-6, 4700e-6];
 const R_LEAK = 2.0e6;      // Leckwiderstand Elko (vereinfacht)
@@ -122,6 +123,19 @@ const svgMarkup = () => `
   <path class="fl fd" d="M670 458 H359 V196 H400"/>
 </g>
 
+<g id="kElec" fill="#8fe3ff"></g>
+<!-- Modell: vergrößerter Plattenkondensator -->
+<g id="kModel" opacity="0">
+  <rect x="340" y="498" width="390" height="114" rx="10" fill="rgba(10,12,14,.88)" stroke="#5a4b8a"/>
+  <text x="352" y="516" fill="#c7b6ff" font-size="12">Modell: Kondensator</text>
+  <text id="kMtxt" x="718" y="516" fill="#ece6dc" font-size="12" text-anchor="end" font-family="IBM Plex Mono, monospace">Q = 0</text>
+  <g id="kMfield" opacity="0" stroke="#ffd36a" stroke-width="1.3">${[530, 544, 558, 572, 586].map(y => `<line x1="486" y1="${y}" x2="564" y2="${y}"/><path d="M524 ${y - 4} L532 ${y} L524 ${y + 4}" fill="none"/>`).join('')}</g>
+  <rect x="476" y="522" width="7" height="72" fill="#c9ced2"/><rect x="567" y="522" width="7" height="72" fill="#c9ced2"/>
+  <line x1="420" y1="558" x2="476" y2="558" stroke="#888" stroke-width="2"/><line x1="574" y1="558" x2="630" y2="558" stroke="#888" stroke-width="2"/>
+  <g id="kMplus" fill="#ff6a4d" font-size="13" font-weight="700" text-anchor="middle"></g>
+  <g id="kMminus" fill="#6fb4ff" font-size="14" font-weight="700" text-anchor="middle"></g>
+  <text x="352" y="604" fill="#8fe3ff" font-size="10.5">● Elektronen</text><text x="430" y="604" fill="#86dcff" font-size="10.5" opacity=".8">– – technische Stromrichtung</text><text x="590" y="604" fill="#ffd36a" font-size="10.5">→ elektrisches Feld</text>
+</g>
 <!-- Schaltplan -->
 <g transform="translate(34 360)">
   <rect width="260" height="220" rx="10" fill="#101316" stroke="#262d33"/>
@@ -175,7 +189,7 @@ export default {
 <p>Beim Laden über einen Widerstand wird – unabhängig von <i>R</i> – genau dieselbe Energie im Widerstand in Wärme umgewandelt, wie im Kondensator gespeichert wird.</p>
 <h3>Modellgrenzen dieser Simulation</h3>
 <ul><li>Elko-Toleranz: Die tatsächliche Kapazität weicht wie bei realen Bauteilen um −10 % … +20 % vom Aufdruck ab (pro Seitenaufruf fest).</li>
-<li>Leckstrom des Elkos über ca. 2 MΩ, Innenwiderstand der Spannungsmessung 10 MΩ, Strommessung 1 Ω. Rauschen und 12-bit-Auflösung des Interfaces sind nachgebildet.</li></ul>`,
+<li>Leckstrom des Elkos über ca. 2 MΩ, Innenwiderstand der Spannungsmessung 10 MΩ, Strommessung 1 Ω. Rauschen und 12-bit-Auflösung des Interfaces sind nachgebildet.</li></ul><h3>Was die Modellansicht zeigt</h3><ul><li><b>Elektronen</b> (Punkte) bewegen sich in den Leitungen <b>entgegen</b> der technischen Stromrichtung (gestrichelt).</li><li>Kein Elektron fließt durch den Kondensator. Beim Laden sammeln sich Elektronen auf der einen Platte, auf der anderen fehlen sie gleich viele: beide Platten tragen den gleichen Betrag Q.</li><li>Mit der Ladung wächst das elektrische Feld zwischen den Platten und damit U<sub>C</sub> = Q/C. Je größer U<sub>C</sub>, desto langsamer wandern die Elektronen – der Strom klingt exponentiell ab.</li></ul>`,
     geraet: `
 <table class="spec"><tbody>
 <tr><td>Netzgerät</td><td>0 … 12 V Gleichspannung</td></tr>
@@ -196,14 +210,12 @@ export default {
 
   async mount({ stage, controls, messwerte, ui, Chart, csvTools, fit }) {
     const { el, group, slider, selectBox, segmented, check, button, fmt, gauss, dataTable, toast } = ui;
-    stage.classList.add('ratio');
-    stage.insertAdjacentHTML('beforeend', svgMarkup());
-    const svg = stage.querySelector('svg');
-    const q = id => svg.querySelector('#' + id);
-    stage.insertAdjacentHTML('beforeend', '<div class="hint" style="top:12px;bottom:auto">Schalter auf der Steckplatte anklicken, um zwischen Laden und Entladen umzuschalten.</div>');
-
+    // Die aktuelle 2D-Ansicht stellt das SVG; ohne sie gehen Zugriffe ins Leere
+    let curSvg = null;
+    const dummy = { setAttribute() {}, style: {}, textContent: '', parentNode: { setAttribute() {} }, addEventListener() {} };
+    const q = id => curSvg?.querySelector('#' + id) || dummy;
     // ---- Zustand ----
-    const S = { U0: 10, Rn: 10e3, Cn: 1000e-6, sw: 'entladen', Q: 0, t: 0, speed: 1, dt: 0.05, auto: true, rec: false, run: null, phase: 0 };
+    const S = { U0: 10, Rn: 10e3, Cn: 1000e-6, sw: 'entladen', Q: 0, t: 0, speed: 1, dt: 0.05, auto: true, rec: false, run: null, phase: 0, phaseE: 0, mU: 0, mI: 0, It: 0, Ut: 0 };
     const real = () => ({ R: S.Rn * tolR.get(S.Rn), C: S.Cn * tolC.get(S.Cn) });
     const runs = [];
 
@@ -248,6 +260,7 @@ export default {
       { key: 'Qint', label: 'Q = ∫I dt in mC', fmt: v => fmt(v * 1e3, 3) }, { key: 'CQ', label: 'C = Q/ΔU in µF', fmt: v => fmt(v * 1e6, 0) }
     ], { onDelete: i => { runs.splice(i, 1); runTable.render(runs); } });
     let shown = null; // angezeigte Messreihe
+    const shownRun = () => shown;
     const revealBtn = button('Tatsächliche Bauteilwerte aufdecken', () => {
       const { R, C } = real();
       toast(`Tatsächlich verbaut: R = ${fmt(R / 1e3, 2)} kΩ, C = ${fmt(C * 1e6, 0)} µF (Aufdruck ${uF(S.Cn)})`, 6000);
@@ -295,7 +308,6 @@ export default {
       q('kSchLever').setAttribute('y2', lad ? 60 : 92);
       if (S.auto) { if (S.rec) stopRec(); startRec(); }
     }
-    q('kSwitch').addEventListener('click', () => setSwitch(S.sw === 'laden' ? 'entladen' : 'laden'));
 
     function measure() {
       const { R, C } = real();
@@ -326,6 +338,194 @@ export default {
       runs.push(r); runTable.render(runs); showResult(r); redraw();
     }
 
+    // ======================= Ansichten =======================
+    // Elektronen-Bahnen im 2D-Aufbau (Richtung = technische Stromrichtung beim Laden; Elektronen laufen entgegen)
+    const TRACKS = [
+      { d: 'M200 252 C 210 340, 300 130, 359 150 V172 L380 164 H400', mode: 'c' },
+      { d: 'M472 180 H490 H540 H650 H670 V222', mode: 'b' },
+      { d: 'M670 230 C 760 220, 860 360, 895 304', mode: 'b' },
+      { d: 'M925 304 C 900 380, 760 300, 670 282', mode: 'b' },
+      { d: 'M670 290 V370', mode: 'b' },
+      { d: 'M670 400 V458', mode: 'b' },
+      { d: 'M670 458 H352 C 300 470, 260 420, 240 252', mode: 'c' },
+      { d: 'M670 458 H359 V196 H400', mode: 'd' }
+    ];
+    async function view2d(box, MM) {
+      box.insertAdjacentHTML('beforeend', svgMarkup());
+      box.insertAdjacentHTML('beforeend', '<div class="hint">Schalter auf der Steckplatte anklicken: Laden ↔ Entladen</div>');
+      curSvg = box.querySelector('svg');
+      const svg = curSvg, NS = 'http://www.w3.org/2000/svg';
+      q('kRlabel').textContent = kOhm(S.Rn); q('kClabel').textContent = uF(S.Cn);
+      q('kLever').setAttribute('y2', S.sw === 'laden' ? 164 : 196); q('kSchLever').setAttribute('y2', S.sw === 'laden' ? 60 : 92);
+      q('kSwitch').addEventListener('click', () => setSwitch(S.sw === 'laden' ? 'entladen' : 'laden'));
+      // Elektronen
+      const eg = q('kElec'), tracks = TRACKS.map(t => {
+        const p = document.createElementNS(NS, 'path'); p.setAttribute('d', t.d); p.setAttribute('fill', 'none'); eg.append(p);
+        const len = p.getTotalLength(), n = Math.max(2, Math.floor(len / 17));
+        const dots = Array.from({ length: n }, () => { const c = document.createElementNS(NS, 'circle'); c.setAttribute('r', 3); eg.append(c); return c; });
+        return { ...t, p, len, dots };
+      });
+      // Platten im Modellkondensator
+      const plus = q('kMplus'), minus = q('kMminus'), fl = q('kMfield');
+      let raf = 0;
+      function frame() {
+        raf = requestAnimationFrame(frame);
+        const lad = S.sw === 'laden', model = MM.model;
+        q('kModel').setAttribute('opacity', model ? 1 : 0);
+        q('kChargeTop').style.display = q('kChargeBot').style.display = model ? '' : 'none';
+        eg.style.display = model ? '' : 'none';
+        if (!model) return;
+        const I0ref = Math.max(S.U0, 1) / S.Rn, rel = Math.min(1, Math.abs(S.It) / I0ref);
+        for (const t of tracks) {
+          const active = t.mode === 'b' || (lad ? t.mode === 'c' : t.mode === 'd');
+          for (let i = 0; i < t.dots.length; i++) {
+            const c = t.dots[i];
+            if (!active || rel < 0.004) { c.style.display = 'none'; continue; }
+            c.style.display = '';
+            const s = (((i * t.len / t.dots.length) - S.phaseE) % t.len + t.len) % t.len;
+            const pt = t.p.getPointAtLength(s); c.setAttribute('cx', pt.x.toFixed(1)); c.setAttribute('cy', pt.y.toFixed(1));
+            c.setAttribute('opacity', (0.35 + 0.65 * Math.min(1, rel * 3)).toFixed(2));
+          }
+        }
+        // Modellkondensator: Ladungen und Feld
+        const n = Math.round(Math.min(1, Math.abs(S.Ut) / 12) * 12);
+        if (plus.childElementCount !== n) {
+          let hp = '', hm = '';
+          for (let i = 0; i < n; i++) { const y = 528 + (i % 6) * 13, x = (i < 6 ? 0 : 1) * 12; hp += `<text x="${452 + x}" y="${y}">+</text>`; hm += `<text x="${598 - x}" y="${y}">−</text>`; }
+          plus.innerHTML = hp; minus.innerHTML = hm;
+        }
+        fl.setAttribute('opacity', Math.min(1, Math.abs(S.Ut) / 8).toFixed(2));
+        q('kMtxt').textContent = `Q = ${fmt(Math.abs(S.Q) * 1e3, 2)} mC   ·   U = ${fmt(Math.abs(S.Ut), 2)} V`;
+      }
+      raf = requestAnimationFrame(frame);
+      return { destroy() { cancelAnimationFrame(raf); curSvg = null; } };
+    }
+
+    async function view3d(box, MM) {
+      const { createLab, mats, cable, powerSupply, socket, label, glowPool, makeDisplay } = await import('../js/lib/lab3d.js');
+      const lab = await createLab(box, { cam: [0.03, 0.3, 0.4], target: [0.02, 0.04, 0], table: [3, 1.6], bloom: [0.35, 0.35, 0.985], room: 0.5, minDist: 0.15, maxDist: 2 });
+      const { THREE, scene } = lab; const M = mats(THREE);
+      box.insertAdjacentHTML('beforeend', '<div class="hint">Drehen: ziehen · Zoom: Mausrad · Umschalter auf der Platte anklicken</div>');
+      // Rastersteckplatte
+      const holeTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d'); g.fillStyle = '#a9ada8'; g.fillRect(0, 0, 512, 512); for (let x = 0; x < 16; x++) for (let y = 0; y < 16; y++) { g.fillStyle = '#7d817c'; g.beginPath(); g.arc(16 + x * 32, 16 + y * 32, 5, 0, 7); g.fill(); g.fillStyle = '#4e524d'; g.beginPath(); g.arc(16 + x * 32, 16 + y * 32, 2.6, 0, 7); g.fill(); } const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1.25, 1.1); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+      const board = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.012, 0.26), [M.housingLight, M.housingLight, new THREE.MeshStandardMaterial({ map: holeTex, roughness: 0.7 }), M.housingLight, M.housingLight, M.housingLight]);
+      board.position.set(0, 0.006, 0); board.castShadow = board.receiveShadow = true; scene.add(board);
+      const blockMat = new THREE.MeshStandardMaterial({ color: 0xd6d6d0, roughness: 0.6 });
+      const printTex = draw => { const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'); g.fillStyle = '#d9d9d3'; g.fillRect(0, 0, 256, 256); g.strokeStyle = '#1b1b1b'; g.lineWidth = 12; g.lineCap = 'round'; draw(g); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
+      const block = (w, d, x, z, draw) => { const top = new THREE.MeshStandardMaterial({ map: printTex(draw), roughness: 0.55 }); const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.016, d), [blockMat, blockMat, top, blockMat, blockMat, blockMat]); m.position.set(x, 0.02, z); m.castShadow = true; scene.add(m); return m; };
+      const Y0 = 0.0285; // Oberseite der Bausteine
+      // Leiterbausteine (Verbindungen), Positionen in m: x nach rechts, z nach vorn
+      const wire = (x, z, rot) => block(0.04, 0.04, x, z, g => { g.beginPath(); if (rot) { g.moveTo(128, 0); g.lineTo(128, 256); } else { g.moveTo(0, 128); g.lineTo(256, 128); } g.stroke(); });
+      block(0.04, 0.04, -0.1, -0.08, g => { g.beginPath(); g.moveTo(0, 128); g.lineTo(256, 128); g.moveTo(128, 128); g.lineTo(128, 256); g.stroke(); });
+      const sw = block(0.04, 0.04, -0.06, -0.08, g => { g.fillStyle = '#1b1b1b'; for (const [x, y] of [[40, 70], [40, 186], [216, 128]]) { g.beginPath(); g.arc(x, y, 14, 0, 7); g.fill(); } g.beginPath(); g.moveTo(0, 70); g.lineTo(40, 70); g.moveTo(0, 186); g.lineTo(40, 186); g.moveTo(216, 128); g.lineTo(256, 128); g.stroke(); });
+      const lever = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.003, 0.004), M.black); lever.geometry.translate(-0.013, 0, 0); lever.position.set(-0.06 + 0.0165, Y0 + 0.003, -0.08); scene.add(lever);
+      const knob = new THREE.Mesh(new THREE.SphereGeometry(0.004, 12, 10), M.red); knob.position.set(-0.026, 0, 0); lever.add(knob);
+      block(0.04, 0.04, -0.02, -0.08, g => { g.strokeRect(70, 100, 116, 56); g.beginPath(); g.moveTo(0, 128); g.lineTo(70, 128); g.moveTo(186, 128); g.lineTo(256, 128); g.stroke(); });
+      wire(0.02, -0.08, false);
+      block(0.04, 0.04, 0.06, -0.08, g => { g.beginPath(); g.moveTo(0, 128); g.lineTo(128, 128); g.lineTo(128, 256); g.stroke(); });
+      block(0.04, 0.04, 0.06, -0.04, g => { g.beginPath(); g.moveTo(128, 0); g.lineTo(128, 80); g.moveTo(128, 176); g.lineTo(128, 256); g.stroke(); g.fillStyle = '#c4231b'; g.beginPath(); g.arc(128, 80, 20, 0, 7); g.fill(); g.fillStyle = '#151515'; g.beginPath(); g.arc(128, 176, 20, 0, 7); g.fill(); });
+      const cBlock = block(0.04, 0.04, 0.06, 0.0, g => { g.beginPath(); g.moveTo(128, 0); g.lineTo(128, 108); g.moveTo(128, 148); g.lineTo(128, 256); g.moveTo(80, 108); g.lineTo(176, 108); g.stroke(); g.beginPath(); g.moveTo(80, 152); g.quadraticCurveTo(128, 136, 176, 152); g.stroke(); });
+      wire(0.06, 0.04, true);
+      for (const x of [-0.1, -0.06, -0.02, 0.02]) wire(x, 0.08, false);
+      block(0.04, 0.04, 0.06, 0.08, g => { g.beginPath(); g.moveTo(128, 0); g.lineTo(128, 128); g.lineTo(0, 128); g.stroke(); });
+      for (const z of [-0.04, 0.0, 0.04]) wire(-0.1, z, true);
+      // Elko auf dem Kondensatorbaustein
+      const elko = new THREE.Group(); elko.position.set(0.06, Y0, 0.0); scene.add(elko);
+      const sleeve = (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 256; const g = c.getContext('2d'); g.fillStyle = '#1f3f8f'; g.fillRect(0, 0, 512, 256); g.fillStyle = '#c9ced6'; g.fillRect(380, 0, 70, 256); g.fillStyle = '#1f3f8f'; g.font = 'bold 60px sans-serif'; for (let y = 40; y < 256; y += 70) g.fillText('−', 398, y + 20); g.fillStyle = '#e6e8ea'; g.font = '600 34px "IBM Plex Sans", sans-serif'; g.save(); g.translate(150, 128); g.rotate(-Math.PI / 2); g.textAlign = 'center'; g.fillText('16 V', 0, 0); g.restore(); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+      const elkoLbl = makeDisplay(THREE, 256, 64, { color: '#e6e8ea', bg: '#1f3f8f' });
+      const can = new THREE.Mesh(new THREE.CylinderGeometry(0.0125, 0.0125, 0.034, 40), new THREE.MeshStandardMaterial({ map: sleeve, roughness: 0.35, metalness: 0.2 })); can.position.y = 0.017; can.castShadow = true; elko.add(can);
+      const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.0118, 0.0118, 0.0012, 40), M.steel); lid.position.y = 0.0346; elko.add(lid);
+      const lblM = new THREE.Mesh(new THREE.PlaneGeometry(0.02, 0.005), new THREE.MeshBasicMaterial({ map: elkoLbl.tex })); lblM.position.set(0, 0.024, 0.01255); elko.add(lblM);
+      // Widerstand auf dem R-Baustein
+      const res = new THREE.Group(); res.position.set(-0.02, Y0 + 0.004, -0.08); scene.add(res);
+      const rb = new THREE.Mesh(new THREE.CylinderGeometry(0.0028, 0.0028, 0.016, 20), new THREE.MeshStandardMaterial({ color: 0x5b8fc9, roughness: 0.45 })); rb.rotation.z = Math.PI / 2; res.add(rb);
+      for (const [x, c] of [[-0.005, 0x8b4513], [-0.002, 0x111111], [0.001, 0xff7a00], [0.005, 0xc8a24a]]) { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.00295, 0.00295, 0.0012, 20), new THREE.MeshStandardMaterial({ color: c })); b.rotation.z = Math.PI / 2; b.position.x = x; res.add(b); }
+      // Buchsen auf der Platte
+      const sockA = socket(THREE, 'red'), sockB = socket(THREE, 'blue'); sockA.rotation.x = -Math.PI / 2; sockB.rotation.x = -Math.PI / 2;
+      sockA.position.set(-0.13, Y0 - 0.006, -0.08); sockB.position.set(-0.13, Y0 - 0.006, 0.08); scene.add(sockA, sockB);
+      const sI1 = socket(THREE, 'red'), sI2 = socket(THREE, 'black'), sU1 = socket(THREE, 'yellow'), sU2 = socket(THREE, 'black');
+      for (const [s, x, z] of [[sI1, 0.085, -0.048], [sI2, 0.085, -0.032], [sU1, 0.085, -0.008], [sU2, 0.085, 0.008]]) { s.rotation.x = -Math.PI / 2; s.position.set(x, Y0 + 0.001, z); scene.add(s); }
+      // Geräte
+      const ps = powerSupply(THREE, { w: 0.2, h: 0.12, d: 0.18, label: 'Netzgerät 0 … 12 V =', displays: 1, knobs: 1, sockets: ['red', 'blue'] });
+      ps.position.set(-0.36, 0, -0.02); ps.rotation.y = 0.45; scene.add(ps);
+      const ifc = powerSupply(THREE, { w: 0.22, h: 0.14, d: 0.16, label: 'Sensor-Interface', displays: 2, knobs: 0, sockets: ['red', 'black', 'yellow', 'black'], color: 'light', dispColor: ['#b7ffd6', '#0b1410'] });
+      ifc.position.set(0.37, 0, -0.02); ifc.rotation.y = -0.45; scene.add(ifc);
+      // kleiner Bildschirm mit der aktuellen Kurve
+      const scr = document.createElement('canvas'); scr.width = 320; scr.height = 160; const sg = scr.getContext('2d'); const scrTex = new THREE.CanvasTexture(scr); scrTex.colorSpace = THREE.SRGBColorSpace;
+      const scrM = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.05), new THREE.MeshBasicMaterial({ map: scrTex, toneMapped: false })); scrM.position.set(0.04, 0.11, 0.0826); ifc.add(scrM);
+      scene.updateMatrixWorld(true);
+      const wp = o => o.getWorldPosition(new THREE.Vector3());
+      const cA = cable(THREE, ps.socketWorld(0), wp(sockA), 0xc4231b, 0.02), cB = cable(THREE, ps.socketWorld(1), wp(sockB), 0x1f4fb8, 0.02);
+      const cI1 = cable(THREE, wp(sI1), ifc.socketWorld(0), 0xc4231b, 0.03), cI2 = cable(THREE, wp(sI2), ifc.socketWorld(1), 0x151515, 0.04);
+      const cU1 = cable(THREE, wp(sU1), ifc.socketWorld(2), 0xd8b21c, 0.05), cU2 = cable(THREE, wp(sU2), ifc.socketWorld(3), 0x151515, 0.06);
+      scene.add(cA, cB, cI1, cI2, cU1, cU2);
+      // Umschalter anklicken
+      const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(), cvs = lab.renderer.domElement;
+      const onClick = e => { const r = cvs.getBoundingClientRect(); ptr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ptr, lab.camera); if (ray.intersectObjects([sw, lever, knob], false).length) setSwitch(S.sw === 'laden' ? 'entladen' : 'laden'); };
+      cvs.addEventListener('click', onClick);
+      // ---- Modell: Elektronen in Leitern und ein vergrößerter Plattenkondensator ----
+      const modelG = new THREE.Group(); scene.add(modelG);
+      const P = (x, z, y = Y0 + 0.004) => new THREE.Vector3(x, y, z);
+      const line3 = pts => new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.05);
+      // Bahnen in technischer Stromrichtung beim Laden
+      const paths = [
+        { c: cA.curve, mode: 'c' }, { c: line3([P(-0.13, -0.08), P(-0.1, -0.08), P(-0.08, -0.08)]), mode: 'c' },
+        { c: line3([P(-0.044, -0.08), P(0.06, -0.08), P(0.06, -0.048)]), mode: 'b' },
+        { c: cI1.curve, mode: 'b' }, { c: new THREE.CatmullRomCurve3([...cI2.curve.points].reverse()), mode: 'b' },
+        { c: line3([P(0.06, -0.032), P(0.06, -0.006)]), mode: 'b' },
+        { c: line3([P(0.06, 0.006), P(0.06, 0.08), P(-0.1, 0.08)]), mode: 'b' },
+        { c: line3([P(-0.1, 0.08), P(-0.13, 0.08)]), mode: 'c' }, { c: new THREE.CatmullRomCurve3([...cB.curve.points].reverse()), mode: 'c' },
+        { c: line3([P(-0.1, 0.08), P(-0.1, -0.06), P(-0.08, -0.068)]), mode: 'd' }
+      ].map(p => ({ ...p, len: p.c.getLength(), pool: null }));
+      for (const p of paths) p.pool = glowPool(THREE, modelG, Math.max(3, Math.round(p.len / 0.016)), 0x8fe3ff, 0.0075);
+      // vergrößerter Plattenkondensator über dem Elko
+      const capG = new THREE.Group(); capG.position.set(0.06, 0.12, 0.0); modelG.add(capG);
+      const plateM = new THREE.MeshStandardMaterial({ color: 0xb9bec2, metalness: 0.9, roughness: 0.3, transparent: true, opacity: 0.85 });
+      const pA = new THREE.Mesh(new THREE.BoxGeometry(0.003, 0.06, 0.06), plateM), pB = pA.clone(); pA.position.x = -0.018; pB.position.x = 0.018; capG.add(pA, pB);
+      const plusP = glowPool(THREE, capG, 24, 0xff6a4d, 0.008), minusP = glowPool(THREE, capG, 24, 0x6fb4ff, 0.008);
+      const fieldMat = new THREE.LineBasicMaterial({ color: 0xffd36a, transparent: true, opacity: 0, toneMapped: false });
+      for (let i = 0; i < 5; i++) for (let k = 0; k < 3; k++) { const y = -0.024 + i * 0.012, z = -0.018 + k * 0.018; capG.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-0.016, y, z), new THREE.Vector3(0.016, y, z)]), fieldMat)); }
+      const lCap = label(THREE, 'Modell: Plattenkondensator', { color: '#c7b6ff', size: 0.011 }); lCap.position.set(0, 0.045, 0); capG.add(lCap);
+      let lQ = label(THREE, 'Q', { color: '#ece6dc', size: 0.011 }); lQ.position.set(0, -0.045, 0); capG.add(lQ);
+      const lead = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0.06, Y0 + 0.036, 0), new THREE.Vector3(0.06, 0.088, 0)]), new THREE.LineDashedMaterial({ color: 0xab93ff, dashSize: 0.004, gapSize: 0.003 })); lead.computeLineDistances(); modelG.add(lead);
+      let lastQtxt = '', lastScr = 0;
+      const off = lab.onFrame((dt, t) => {
+        ps.displays[0].draw(S.U0.toFixed(1), 'V'); ps.setKnob(0, S.U0 / 12);
+        ifc.displays[0].draw(fmt(S.mU, 3), 'V'); ifc.displays[1].draw(fmt(S.mI * 1e3, 3), 'mA');
+        elkoLbl.draw(uF(S.Cn).replace(' ', ''), '');
+        lever.rotation.y = S.sw === 'laden' ? -0.42 : 0.42;
+        // Bildschirm mit Messkurve
+        if (t - lastScr > 0.25) {
+          lastScr = t; sg.fillStyle = '#0b1410'; sg.fillRect(0, 0, 320, 160); sg.strokeStyle = '#1d3a2b'; sg.lineWidth = 1;
+          for (let i = 1; i < 8; i++) { sg.beginPath(); sg.moveTo(i * 40, 0); sg.lineTo(i * 40, 160); sg.stroke(); } for (let i = 1; i < 4; i++) { sg.beginPath(); sg.moveTo(0, i * 40); sg.lineTo(320, i * 40); sg.stroke(); }
+          const d = shownRun()?.data || []; if (d.length > 1) { const tmax = Math.max(d[d.length - 1][0], 1e-3); sg.strokeStyle = '#7dffb8'; sg.lineWidth = 3; sg.beginPath(); d.forEach((p, i) => { const x = p[0] / tmax * 312 + 4, y = 154 - p[1] / 12 * 148; i ? sg.lineTo(x, y) : sg.moveTo(x, y); }); sg.stroke(); }
+          scrTex.needsUpdate = true;
+        }
+        // Modell
+        modelG.visible = MM.model;
+        if (!MM.model) return;
+        const lad = S.sw === 'laden', I0ref = Math.max(S.U0, 1) / S.Rn, rel = Math.min(1, Math.abs(S.It) / I0ref);
+        const off = -S.phaseE * 0.0009; // gleiche Phase wie in 2D, in m
+        for (const p of paths) {
+          const active = p.mode === 'b' || (lad ? p.mode === 'c' : p.mode === 'd');
+          const n = p.pool.items.length;
+          p.pool.items.forEach((s, i) => {
+            s.visible = active && rel > 0.004; if (!s.visible) return;
+            const u = ((((i / n) * p.len + off) % p.len) + p.len) % p.len / p.len;
+            s.position.copy(p.c.getPointAt(u)); s.material.opacity = 0.35 + 0.65 * Math.min(1, rel * 3);
+          });
+        }
+        const nq = Math.round(Math.min(1, Math.abs(S.Ut) / 12) * 24);
+        plusP.items.forEach((s, i) => { s.visible = i < nq; s.position.set(-0.022, -0.025 + (i % 6) * 0.01, -0.02 + Math.floor(i / 6) * 0.0133); });
+        minusP.items.forEach((s, i) => { s.visible = i < nq; s.position.set(0.022, -0.025 + (i % 6) * 0.01, -0.02 + Math.floor(i / 6) * 0.0133); });
+        fieldMat.opacity = Math.min(0.9, Math.abs(S.Ut) / 8);
+        const qt = `Q = ${fmt(Math.abs(S.Q) * 1e3, 2)} mC`; if (qt !== lastQtxt) { lastQtxt = qt; capG.remove(lQ); lQ.material.map.dispose(); lQ.material.dispose(); lQ = label(THREE, qt, { color: '#ece6dc', size: 0.011 }); lQ.position.set(0, -0.045, 0); capG.add(lQ); }
+      });
+      return { destroy() { off(); cvs.removeEventListener('click', onClick); lab.dispose(); } };
+    }
+
+    const host = viewHost(stage, { id: 'kondensator', views: { '2d': view2d, '3d': view3d }, initial: '3d', modelInfo: 'Elektronen, Ladungen und Feld' });
+
     // ---- Simulationsschleife ----
     let raf = 0, last = performance.now(), redrawAcc = 0;
     function step(dtSim) {
@@ -352,7 +552,7 @@ export default {
         }
         if (cStop.get() && S.t > 6 * S.Rn * S.Cn) stopRec();
       } else step(remaining);
-      const m = measure();
+      const m = measure(); S.mU = m.U; S.mI = m.I; S.It = m.It; S.Ut = m.Ut;
       dU.set(`${fmt(m.U, 3)} V`); dI.set(`${fmt(m.I * 1e3, 3)} mA`); dT.set(S.rec ? `${fmt(S.t, 2)} s` : '–');
       q('kDispU').textContent = `${fmt(m.U, 3)} V`; q('kDispI').textContent = `${fmt(m.I * 1e3, 3)} mA`;
       q('kPsuDisp').textContent = S.U0.toFixed(1);
@@ -362,16 +562,16 @@ export default {
       q('kChargeTop').setAttribute('opacity', frac.toFixed(2)); q('kChargeBot').setAttribute('opacity', frac.toFixed(2));
       // Stromfluss
       const I0ref = Math.max(S.U0, 1) / S.Rn;
-      S.phase += (m.It / I0ref) * dtReal * 90;
+      S.phase += (m.It / I0ref) * dtReal * 90; S.phaseE += (m.It / I0ref) * dtReal * 40;
       const lad = S.sw === 'laden';
-      for (const p of svg.querySelectorAll('.fl')) {
+      for (const p of (curSvg ? curSvg.querySelectorAll('.fl') : [])) {
         const active = p.classList.contains('fb') || (lad ? p.classList.contains('fc') : p.classList.contains('fd'));
-                p.style.opacity = active ? Math.min(1, Math.abs(m.It) / I0ref * 3).toFixed(2) : 0;
+                p.style.opacity = active && host.M.model ? (0.7 * Math.min(1, Math.abs(m.It) / I0ref * 3)).toFixed(2) : 0;
         p.style.strokeDashoffset = (-S.phase).toFixed(1);
       }
       redrawAcc += dtReal; if (S.rec && redrawAcc > 0.25) { redrawAcc = 0; redraw(); }
     }
     raf = requestAnimationFrame(frame);
-    return { destroy() { cancelAnimationFrame(raf); chart.destroy(); } };
+    return { destroy() { cancelAnimationFrame(raf); host.destroy(); chart.destroy(); } };
   }
 };

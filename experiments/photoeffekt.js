@@ -4,6 +4,7 @@
 //  Gegenspannungsquelle und Messverstärker (nA) bzw. Elektrometer (Kondensatormethode).
 //  Modell: I(U) = I_ph·(1 − U/U₀)² für U < U₀, dazu ein kleiner Gegenstrom aus der Anode.
 // ============================================================================
+import { viewHost } from '../js/lib/views.js';
 const E = 1.602176634e-19, H = 6.62607015e-34, C0 = 299792458;
 const LINES = [
   { id: 'gelb', name: 'gelb', nm: 578.0, qe: 0.30 },
@@ -62,7 +63,8 @@ const svgMarkup = () => `
 <line x1="600" y1="203" x2="600" y2="300" stroke="#c9d0d4" stroke-width="2"/>
 <text x="560" y="150" fill="#c9c3ba" font-size="12" text-anchor="end">Anode (Ring)</text>
 <line x1="700" y1="185" x2="700" y2="300" stroke="#c9a85a" stroke-width="2"/>
-<g id="pElectrons" fill="#86dcff" filter="url(#pGlow)"></g>
+<g id="pPhotons" fill="none" stroke-width="1.8" stroke-linecap="round" filter="url(#pGlow)"></g>
+<g id="pElectrons" fill="#9fe6ff" filter="url(#pGlow)"></g>
 <text x="580" y="58" fill="#c9c3ba" font-size="12" text-anchor="middle">Fotozelle (Vakuum)</text>
 <!-- Leitungen -->
 <g fill="none" stroke-width="5" stroke-linecap="round" opacity=".95">
@@ -87,12 +89,12 @@ const svgMarkup = () => `
 <text id="pDispI" x="916" y="512" text-anchor="end" fill="#b7ffd6" font-size="30" font-family="IBM Plex Mono, monospace" filter="url(#pGlow)">0,000 nA</text>
 <use href="#pSock" x="720" y="550" color="#1f4fb8"/><use href="#pSock" x="780" y="550" color="#151515"/>
 <text x="840" y="554" fill="#444" font-size="11" id="pAmpRange">Bereich 10 nA</text>
-<!-- Energieskizze -->
-<g transform="translate(40 340)">
+<!-- Energieskizze (Modell) -->
+<g id="pModel" opacity="0"><g transform="translate(40 340)">
   <rect width="270" height="230" rx="10" fill="#101316" stroke="#262d33"/>
   <text x="14" y="24" fill="#8e979d" font-size="12">Energiebilanz eines Elektrons</text>
   <g id="pBars"></g>
-</g>
+</g></g>
 </svg>`;
 
 export default {
@@ -127,7 +129,7 @@ export default {
 <h3>Modellgrenzen und Fehlerquellen</h3>
 <ul><li>Zwischen Kathode und Anode besteht eine Kontaktspannung. Sie verschiebt alle <i>U₀</i>-Werte gleich, verändert die Steigung also nicht. Die gemessene „Austrittsarbeit“ ist deshalb eine effektive Größe.</li>
 <li>Auch aus der Anode werden einige Elektronen ausgelöst. Dieser kleine Gegenstrom lässt den Strom schon kurz vor <i>U₀</i> null werden – die Werte fallen etwas zu klein aus.</li>
-<li>Der Stromverlauf vor <i>U₀</i> ist hier vereinfacht als Parabel angesetzt.</li></ul>`,
+<li>Der Stromverlauf vor <i>U₀</i> ist hier vereinfacht als Parabel angesetzt.</li></ul><h3>Was die Modellansicht zeigt</h3><ul><li><b>Photonen</b> als Wellenpakete mit der Farbe und (vergrößerten) Wellenlänge des Filters.</li><li>Jedes Photon kann <b>höchstens ein Elektron</b> auslösen. Mehr Licht bedeutet mehr Photonen und mehr Elektronen, aber nicht schnellere.</li><li><b>Elektronen</b> starten mit verschiedenen Energien (höchstens h·f − W<sub>A</sub>), werden im Gegenfeld abgebremst und kehren um, wenn ihre Energie nicht reicht.</li><li>Die <b>Energiebilanz</b> vergleicht h·f, W<sub>A</sub>, E<sub>kin,max</sub> und e·U.</li></ul>`,
     geraet: `
 <table class="spec"><tbody>
 <tr><td>Lichtquelle</td><td>Hg-Hochdrucklampe, Linien 578 · 546 · 436 · 405 · 365 nm</td></tr>
@@ -147,28 +149,25 @@ export default {
 
   async mount({ stage, controls, messwerte, ui, Chart, csvTools, fit }) {
     const { el, group, slider, selectBox, segmented, check, button, fmt, gauss, dataTable, toast, display } = ui;
-    stage.classList.add('ratio');
-    stage.insertAdjacentHTML('beforeend', svgMarkup());
-    const svg = stage.querySelector('svg');
-    const q = id => svg.querySelector('#' + id);
-    const NS = 'http://www.w3.org/2000/svg';
 
-    const S = { on: false, warm: 0, line: LINES[1], ap: 1, U: 0, mode: 'gegen', Uel: 0, sweep: null };
+    // ---------------- Zustand und Physik ----------------
+    const S = { on: false, warm: 0, line: LINES[1], ap: 1, U: 0, mode: 'gegen', Uel: 0, sweep: null, I: 0 };
     const Iph = () => 4.0e-9 * S.line.qe * S.ap * S.warm;  // A
     function current(U) {
       const U0 = U0of(S.line), ip = Iph();
       const fwd = U < U0 ? ip * (1 - U / U0) ** 2 : 0;
       return fwd - I_REV * ip * (1 - Math.exp(-Math.max(U, 0) / 0.4));
     }
+    const Ubrake = () => S.mode === 'gegen' ? S.U : S.Uel; // Spannung, die die Elektronen abbremst
 
-    // ---- Bedienfeld ----
+    // ---------------- Bedienfeld ----------------
     const gL = group('Lampe und Filter', { led: true });
     const cOn = check({ label: 'Hg-Lampe einschalten', onChange: v => { S.on = v; gL.led(v); } });
-    const sF = selectBox({ label: 'Interferenzfilter', value: 'gruen', options: LINES.map(l => ({ value: l.id, label: `${l.name} – ${fmt(l.nm, 1)} nm` })), onChange: v => { S.line = LINES.find(l => l.id === v); S.Uel = 0; paintStatic(); } });
-    const sAp = slider({ label: 'Irisblende (Lichtstärke)', min: 10, max: 100, step: 5, value: 100, unit: '%', onInput: v => { S.ap = v / 100; paintStatic(); } });
+    const sF = selectBox({ label: 'Interferenzfilter', value: 'gruen', options: LINES.map(l => ({ value: l.id, label: `${l.name} – ${fmt(l.nm, 1)} nm` })), onChange: v => { S.line = LINES.find(l => l.id === v); S.Uel = 0; dF.set(`${fmt(C0 / (S.line.nm * 1e-9) / 1e14, 2)}·10¹⁴ Hz`); } });
+    const sAp = slider({ label: 'Irisblende (Lichtstärke)', min: 10, max: 100, step: 5, value: 100, unit: '%', onInput: v => { S.ap = v / 100; } });
     gL.append(cOn, sF, sAp);
     const gM = group('Messmethode');
-    const segM = segmented({ value: 'gegen', options: [{ value: 'gegen', label: 'Gegenfeld (I = 0)' }, { value: 'kond', label: 'Kondensator' }], onChange: v => { S.mode = v; S.Uel = 0; paintStatic(); gU.style.display = v === 'gegen' ? '' : 'none'; } });
+    const segM = segmented({ value: 'gegen', options: [{ value: 'gegen', label: 'Gegenfeld (I = 0)' }, { value: 'kond', label: 'Kondensator' }], onChange: v => { S.mode = v; S.Uel = 0; gU.style.display = v === 'gegen' ? '' : 'none'; } });
     gM.append(segM);
     const gU = group('Gegenspannung', { led: true }); gU.led(true); gU.querySelector('.led').classList.add('g');
     const sU = slider({ label: 'Gegenspannung U', min: 0, max: 3, step: 0.001, value: 0, unit: 'V', digits: 3, onInput: v => { S.U = v; } });
@@ -176,12 +175,13 @@ export default {
     gU.append(sU, fine);
     const gR = group('Messung');
     const dI = display('Anzeige'), dF = display('Frequenz f');
+    dF.set(`${fmt(C0 / (S.line.nm * 1e-9) / 1e14, 2)}·10¹⁴ Hz`);
     const bTake = button('U₀ übernehmen', () => take(), 'btn small primary');
     const bSweep = button('Kennlinie aufnehmen', () => startSweep());
     gR.append(dI, dF, el('div', { class: 'bar' }, bTake, bSweep));
     controls.append(gL, gM, gU, gR);
 
-    // ---- Messwerte ----
+    // ---------------- Messwerte ----------------
     const rows = [], curves = [];
     const tbl = dataTable([
       { key: 'farbe', label: 'Linie', fmt: v => v }, { key: 'nm', label: 'λ in nm', digits: 1 },
@@ -200,7 +200,6 @@ export default {
           el('p', { class: 'muted', style: 'font-size:13px;margin:8px 0 0' }, 'Kennlinien bei gleicher Linie und verschiedener Blende schneiden die U-Achse an derselben Stelle.'),
           csvTools(() => ({ meta: ['Photoeffekt – Kennlinien'], columns: [{ key: 'kurve', label: 'Kennlinie' }, { key: 'U', label: 'U in V' }, { key: 'I', label: 'I in nA' }], rows: curves.flatMap(c => c.pts.map(p => ({ kurve: c.name, U: p[0], I: p[1] }))) }), 'photoeffekt_kennlinien'))),
       el('div', { style: 'height:14px' }), tbl);
-
     function redraw() {
       tbl.render(rows);
       const pts = rows.map(r => [r.f / 1e14, r.U0]);
@@ -213,13 +212,12 @@ export default {
       chB.set(curves.map(c => ({ name: c.name, color: c.color, points: c.pts })));
     }
     redraw();
-
+    const Ufinal = () => { let lo = 0, hi = U0of(S.line) + 0.01; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; current(m) > 0 ? lo = m : hi = m; } return lo; };
     function take() {
       if (S.warm < 0.9) { toast(S.on ? 'Die Lampe ist noch nicht warm.' : 'Erst die Lampe einschalten.'); return; }
       let U0, meth;
       if (S.mode === 'gegen') {
-        const I = current(S.U);
-        if (I > 0.05 * Iph() + 3e-12) { toast('Es fließt noch Strom. Gegenspannung weiter erhöhen, bis die Anzeige null zeigt.'); return; }
+        if (current(S.U) > 0.05 * Iph() + 3e-12) { toast('Es fließt noch Strom. Gegenspannung weiter erhöhen, bis die Anzeige null zeigt.'); return; }
         if (S.U > U0of(S.line) + 0.15) toast('Hinweis: Die Spannung liegt schon deutlich über dem Wert, bei dem der Strom null wird.');
         U0 = S.U; meth = 'Gegenfeld';
       } else {
@@ -230,100 +228,200 @@ export default {
       rows.push({ farbe: l.name, nm: l.nm, f: C0 / (l.nm * 1e-9), ap: S.ap, meth, U0: +U0.toFixed(3) }); redraw();
       toast(`Übernommen: ${l.name}, U₀ = ${fmt(U0, 3)} V`);
     }
-    const Ufinal = () => { // Leerlaufspannung: Strom (inkl. Gegenstrom) wird null
-      let lo = 0, hi = U0of(S.line) + 0.01; for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; current(m) > 0 ? lo = m : hi = m; } return lo;
-    };
     function startSweep() {
       if (S.warm < 0.9) { toast('Erst die Lampe einschalten und warten.'); return; }
       if (S.mode !== 'gegen') { segM.set('gegen'); S.mode = 'gegen'; gU.style.display = ''; }
-      const name = `${S.line.name}, ${Math.round(S.ap * 100)} %`;
-      const c = { name, color: lineColor(S.line.id), pts: [] }; curves.push(c); if (curves.length > 8) curves.shift();
+      const c = { name: `${S.line.name}, ${Math.round(S.ap * 100)} %`, color: lineColor(S.line.id), pts: [] }; curves.push(c); if (curves.length > 8) curves.shift();
       S.sweep = { c, U: 0 }; bSweep.disabled = true;
     }
 
-    // ---- statische Farben ----
-    function paintStatic() {
-      const col = lineColor(S.line.id);
-      q('pFilter').setAttribute('fill', col);
-      q('pFilterLbl').textContent = `${Math.round(S.line.nm)} nm`;
-      q('pIntLbl').textContent = `Blende ${Math.round(S.ap * 100)} %`;
-      q('pBeam2').setAttribute('fill', col);
-      q('pAmpTitle').textContent = S.mode === 'gegen' ? 'Messverstärker · Strom' : 'Elektrometerverstärker · Spannung';
-      q('pAmpLbl').textContent = S.mode === 'gegen' ? 'Fotostrom' : 'Spannung an der Fotozelle';
-      q('pAmpRange').textContent = S.mode === 'gegen' ? 'Bereich 10 nA' : 'Bereich 3 V';
-      dF.set(`${fmt(C0 / (S.line.nm * 1e-9) / 1e14, 2)}·10¹⁴ Hz`);
-    }
-    paintStatic();
-
-    // ---- Elektronen-Animation ----
-    const eg = q('pElectrons'); const parts = [];
-    const CX = 586.7, AX = 600, AY = 185, K = 110; // Mittelpunkt des Kathodenbogens, Anode
-    function spawn() {
-      const ang = (Math.random() - 0.5) * 1.7, sx = CX + 88 * Math.cos(ang) - 5, sy = 185 + 88 * Math.sin(ang);
-      const ek = Math.random() * U0of(S.line); // eV, gleichverteilt bis E_kin,max
-      const D = Math.hypot(sx - AX, sy - AY) - 16;
-      const c = document.createElementNS(NS, 'circle'); c.setAttribute('r', 2.6); eg.append(c);
-      parts.push({ sx, sy, D, s: 0, v: Math.sqrt(ek) * K, el: c });
-    }
-    function energyBars(U) {
-      const hf = 1239.84 / S.line.nm, W = W_EFF, ek = Math.max(0, hf - W), sc = 46;
-      const base = 205, x = 30;
-      const bar = (x, h, y, col, txt) => `<rect x="${x}" y="${(y - h).toFixed(1)}" width="44" height="${Math.max(0, h).toFixed(1)}" rx="3" fill="${col}"/><text x="${x + 22}" y="${(y - h - 6).toFixed(1)}" fill="#c7c1b7" font-size="11" text-anchor="middle">${txt}</text>`;
-      let h = bar(x, hf * sc, base, lineColor(S.line.id), `h·f = ${fmt(hf, 2)} eV`);
-      h += bar(x + 80, W * sc, base, '#5b6268', `W = ${fmt(W, 2)}`) + bar(x + 80, ek * sc, base - W * sc, '#86dcff', `E<tspan font-size="8">kin</tspan>`);
-      const eu = S.mode === 'gegen' ? U : S.Uel;
-      h += bar(x + 160, Math.min(eu, 3) * sc, base, eu >= ek - 1e-3 ? '#ff4b3e' : '#ff8a7a', `e·U = ${fmt(eu, 2)} eV`);
-      h += `<line x1="20" y1="${base}" x2="250" y2="${base}" stroke="#4a545c"/>`;
-      q('pBars').innerHTML = h;
+    // ---------------- Teilchenmodell (gemeinsam für 2D und 3D) ----------------
+    // Photonen fliegen von der Linse zur Kathode (u: 0 → 1). Trifft eines auf, löst es mit der
+    // Quantenausbeute ein Elektron aus: E_kin = h·f − W − (Verlust im Metall), höchstens h·f − W.
+    // Elektronen laufen auf die Anode zu (s: 0 → 1) und werden von e·U gebremst.
+    const photons = [], electrons = [];
+    let photonAcc = 0;
+    function stepParticles(dt) {
+      photonAcc += dt * 12 * S.ap * S.warm;
+      while (photonAcc > 1) { photonAcc -= 1; if (photons.length < 60) photons.push({ u: 0, y: Math.random() * 2 - 1, z: Math.random() * 2 - 1 }); }
+      for (let i = photons.length - 1; i >= 0; i--) {
+        const p = photons[i]; p.u += dt * 0.9;
+        if (p.u >= 1) {
+          photons.splice(i, 1);
+          if (Math.random() < 0.35 + 0.6 * S.line.qe && electrons.length < 60) {
+            const ek = U0of(S.line) * Math.sqrt(Math.random()); // viele Elektronen verlieren im Metall Energie
+            electrons.push({ s: 0, v: Math.sqrt(ek) + 0.02, ek, y: p.y * 0.85, z: p.z * 0.85, flash: 0.25, age: 0 });
+          }
+        }
+      }
+      const Ub = Ubrake();
+      for (let i = electrons.length - 1; i >= 0; i--) {
+        const e = electrons[i]; e.flash -= dt; e.age += dt; if (e.age > 6) { electrons.splice(i, 1); continue; }
+        // normiert: v² = ek − U·s  (Energiesatz), Laufzeit-Skalierung nur für die Darstellung
+        const a = Ub / 2; e.v -= a * dt * 1.6; e.s += e.v * dt * 1.6;
+        if (e.s >= 1) { electrons.splice(i, 1); continue; }          // an der Anode angekommen
+        if (e.s < 0) { electrons.splice(i, 1); continue; }           // zurück zur Kathode
+      }
     }
 
-    // ---- Schleife ----
-    let raf = 0, last = performance.now(), spawnAcc = 0, barAcc = 0;
-    function frame(now) {
+    // ---------------- Ansicht 2D ----------------
+    async function view2d(box, MM) {
+      box.insertAdjacentHTML('beforeend', svgMarkup());
+      const svg = box.querySelector('svg'), q = id => svg.querySelector('#' + id), NS = 'http://www.w3.org/2000/svg';
+      const eg = q('pElectrons'), pg = q('pPhotons');
+      const CX = 586.7, AX = 600, AY = 185;
+      let raf = 0, barAcc = 0;
+      function energyBars() {
+        const hf = 1239.84 / S.line.nm, W = W_EFF, ek = Math.max(0, hf - W), sc = 46, base = 205, x = 30;
+        const bar = (x, h, y, col, txt) => `<rect x="${x}" y="${(y - h).toFixed(1)}" width="44" height="${Math.max(0, h).toFixed(1)}" rx="3" fill="${col}"/><text x="${x + 22}" y="${(y - h - 6).toFixed(1)}" fill="#c7c1b7" font-size="11" text-anchor="middle">${txt}</text>`;
+        let h = bar(x, hf * sc, base, lineColor(S.line.id), `h·f = ${fmt(hf, 2)} eV`);
+        h += bar(x + 80, W * sc, base, '#5b6268', `W = ${fmt(W, 2)}`) + bar(x + 80, ek * sc, base - W * sc, '#86dcff', 'E_kin,max');
+        const eu = Ubrake();
+        h += bar(x + 160, Math.min(eu, 3) * sc, base, eu >= ek - 1e-3 ? '#ff4b3e' : '#ff8a7a', `e·U = ${fmt(eu, 2)} eV`);
+        h += `<line x1="20" y1="${base}" x2="250" y2="${base}" stroke="#4a545c"/>`;
+        q('pBars').innerHTML = h;
+      }
+      function frame() {
+        raf = requestAnimationFrame(frame);
+        const col = lineColor(S.line.id), model = MM.model;
+        q('pFilter').setAttribute('fill', col); q('pFilterLbl').textContent = `${Math.round(S.line.nm)} nm`;
+        q('pIntLbl').textContent = `Blende ${Math.round(S.ap * 100)} %`; q('pBeam2').setAttribute('fill', col);
+        q('pAmpTitle').textContent = S.mode === 'gegen' ? 'Messverstärker · Strom' : 'Elektrometerverstärker · Spannung';
+        q('pAmpLbl').textContent = S.mode === 'gegen' ? 'Fotostrom' : 'Spannung an der Fotozelle';
+        q('pAmpRange').textContent = S.mode === 'gegen' ? 'Bereich 10 nA' : 'Bereich 3 V';
+        q('pLampGlow').setAttribute('opacity', (S.warm * 0.85).toFixed(2)); q('pLampLed').setAttribute('fill', S.on ? '#7fd6a0' : '#333');
+        q('pBeam1').setAttribute('opacity', (S.warm * 0.4).toFixed(2));
+        q('pBeam2').setAttribute('opacity', (S.warm * (0.12 + 0.3 * S.ap) * (model ? 0.45 : 1)).toFixed(2));
+        q('pDispU').textContent = (S.mode === 'gegen' ? S.U : 0).toFixed(3);
+        q('pDispI').textContent = S.mode === 'gegen' ? `${fmt(S.I * 1e9, 3)} nA` : `${fmt(S.Uel, 3)} V`;
+        q('pModel').setAttribute('opacity', model ? 1 : 0);
+        // Photonen als Wellenpakete
+        const lamPx = S.line.nm / 42;
+        let ph = '';
+        if (model) for (const p of photons) {
+          const x = 300 + p.u * 340, y = 185 + p.y * 14 * (1 - p.u * 0.2);
+          let d = `M${(x - 18).toFixed(1)} ${y.toFixed(1)}`;
+          for (let k = 1; k <= 18; k++) { const xx = x - 18 + k * 2, env = Math.sin(Math.PI * k / 18); d += ` L${xx.toFixed(1)} ${(y - Math.sin(k * 2 / lamPx * 2 * Math.PI) * 4 * env).toFixed(1)}`; }
+          ph += `<path d="${d}"/>`;
+        }
+        pg.innerHTML = ph; pg.setAttribute('stroke', col);
+        // Elektronen
+        let eh = '';
+        if (model) for (const e of electrons) {
+          const ang = e.y * 0.85, sx = CX + 88 * Math.cos(ang) - 5, sy = 185 + 88 * Math.sin(ang);
+          const f = Math.max(0, e.s); const x = sx + (AX + 14 - sx) * f, y = sy + (AY - sy) * f;
+          eh += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.8"/>`;
+          if (e.flash > 0) eh += `<circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="${(9 * e.flash / 0.25).toFixed(1)}" fill="none" stroke="#fff" stroke-opacity="${(e.flash * 3).toFixed(2)}"/>`;
+        }
+        eg.innerHTML = eh;
+        barAcc += 1; if (model && barAcc % 6 === 0) energyBars();
+      }
       raf = requestAnimationFrame(frame);
+      return { destroy() { cancelAnimationFrame(raf); } };
+    }
+
+    // ---------------- Ansicht 3D ----------------
+    async function view3d(box, MM) {
+      const { createLab, mats, cable, powerSupply, socket, label, glassMaterial, glowPool } = await import('../js/lib/lab3d.js');
+      const lab = await createLab(box, { cam: [0.18, 0.42, 0.78], target: [-0.08, 0.14, 0], table: [3, 1.6], bloom: [0.9, 0.5, 0.82], room: 0.35, minDist: 0.15, maxDist: 2.4, fov: 34 });
+      const { THREE, scene } = lab; const M = mats(THREE);
+      box.insertAdjacentHTML('beforeend', '<div class="hint">Drehen: ziehen · Zoom: Mausrad · Raum abgedunkelt</div>');
+      const YB = 0.15; // Höhe der optischen Achse
+      const stand = (x, h = YB - 0.02) => { const g = new THREE.Group(); const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.012, 32), M.housing); foot.position.y = 0.006; foot.castShadow = true; const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, h, 16), M.steel); rod.position.y = h / 2 + 0.01; g.add(foot, rod); g.position.x = x; scene.add(g); return g; };
+      // Lampe
+      const lamp = new THREE.Group(); lamp.position.set(-0.46, YB, 0); scene.add(lamp);
+      const house = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.15, 0.13), new THREE.MeshStandardMaterial({ color: 0x2c3135, roughness: 0.5, metalness: 0.4 })); house.castShadow = true; lamp.add(house);
+      for (let i = 0; i < 6; i++) { const v = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.004, 0.002), M.black); v.position.set(0, -0.05 + i * 0.02, 0.066); lamp.add(v); }
+      const snout = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.06, 32), M.housing); snout.rotation.z = Math.PI / 2; snout.position.x = 0.1; lamp.add(snout);
+      const bulb = new THREE.Mesh(new THREE.CircleGeometry(0.024, 32), new THREE.MeshBasicMaterial({ color: 0xdfe8ff, toneMapped: false })); bulb.position.x = 0.1305; bulb.rotation.y = Math.PI / 2; lamp.add(bulb);
+      const lampLight = new THREE.PointLight(0xc9d6ff, 0, 1.2, 1.6); lampLight.position.set(0.16, 0, 0); lamp.add(lampLight);
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, YB - 0.075, 0.08), M.housing); leg.position.y = -(YB - 0.075) / 2 - 0.075; lamp.add(leg);
+      // Filter
+      stand(-0.27);
+      const filt = new THREE.Group(); filt.position.set(-0.27, YB, 0); scene.add(filt);
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.07, 0.07), M.black); filt.add(frame);
+      const glassF = new THREE.Mesh(new THREE.BoxGeometry(0.009, 0.05, 0.05), new THREE.MeshStandardMaterial({ color: 0x62e06e, emissive: 0x62e06e, emissiveIntensity: 0.3, transparent: true, opacity: 0.75, roughness: 0.1 })); filt.add(glassF);
+      // Linse mit Irisblende
+      stand(-0.17);
+      const lens = new THREE.Group(); lens.position.set(-0.17, YB, 0); scene.add(lens);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.032, 0.006, 12, 40), M.black); ring.rotation.y = Math.PI / 2; lens.add(ring);
+      const lg = new THREE.Mesh(new THREE.SphereGeometry(0.06, 32, 16, 0, Math.PI * 2, 0, 0.55), glassMaterial(THREE)); lg.rotation.z = -Math.PI / 2; lg.position.x = -0.05; lg.scale.set(1, 0.5, 1); lens.add(lg);
+      const iris = new THREE.Mesh(new THREE.RingGeometry(0.01, 0.031, 40), new THREE.MeshStandardMaterial({ color: 0x15171a, side: THREE.DoubleSide, roughness: 0.6 })); iris.rotation.y = Math.PI / 2; iris.position.x = 0.008; lens.add(iris);
+      // Fotozelle
+      const cell = new THREE.Group(); cell.position.set(0.06, YB, 0); scene.add(cell);
+      const base = new THREE.Mesh(new THREE.BoxGeometry(0.11, YB - 0.05, 0.09), M.housing); base.position.y = -(YB - 0.05) / 2 - 0.05; base.castShadow = true; cell.add(base);
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, 0.03, 24), glassMaterial(THREE)); neck.position.y = -0.052; cell.add(neck);
+      const bulbG = new THREE.Mesh(new THREE.SphereGeometry(0.045, 64, 48), glassMaterial(THREE)); bulbG.renderOrder = 5; cell.add(bulbG);
+      const cath = new THREE.Mesh(new THREE.SphereGeometry(0.041, 48, 32, -Math.PI / 2 + 0.25, Math.PI - 0.5, 0.35, Math.PI - 0.7), new THREE.MeshStandardMaterial({ color: 0xc9a85a, metalness: 1, roughness: 0.35, side: THREE.DoubleSide })); cell.add(cath);
+      const anode = new THREE.Mesh(new THREE.TorusGeometry(0.011, 0.0012, 10, 40), M.steel); anode.rotation.y = Math.PI / 2; anode.position.x = -0.006; cell.add(anode);
+      const aStem = new THREE.Mesh(new THREE.CylinderGeometry(0.0009, 0.0009, 0.035, 8), M.steel); aStem.position.set(-0.006, -0.028, 0); cell.add(aStem);
+      const sK = socket(THREE, 'red'), sA = socket(THREE, 'black'); sK.position.set(-0.02, -0.1, 0.046); sA.position.set(0.02, -0.1, 0.046); cell.add(sK, sA);
+      // Lichtbündel
+      const beamM1 = new THREE.MeshBasicMaterial({ color: 0xdfe8ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+      const beam1 = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.022, 0.13, 24, 1, true), beamM1); beam1.rotation.z = Math.PI / 2; beam1.position.set(-0.335, YB, 0); scene.add(beam1);
+      const beamM2 = new THREE.MeshBasicMaterial({ color: 0x62e06e, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
+      const beam2 = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.022, 0.1, 24, 1, true), beamM2); beam2.rotation.z = Math.PI / 2; beam2.position.set(-0.22, YB, 0); scene.add(beam2);
+      const beam3 = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.008, 0.24, 24, 1, true), beamM2); beam3.rotation.z = Math.PI / 2; beam3.position.set(-0.05, YB, 0); scene.add(beam3);
+      const spot = new THREE.Mesh(new THREE.CircleGeometry(0.03, 32), new THREE.MeshBasicMaterial({ color: 0x62e06e, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }));
+      spot.rotation.y = Math.PI / 2; spot.position.set(0.06 + 0.036, YB, 0); scene.add(spot);
+      // Geräte
+      const src = powerSupply(THREE, { w: 0.2, h: 0.11, d: 0.17, label: 'Gegenspannung 0 … 3 V', displays: 1, knobs: 1, sockets: ['red', 'blue'] });
+      src.position.set(-0.08, 0, 0.3); src.rotation.y = 0.15; scene.add(src);
+      const amp = powerSupply(THREE, { w: 0.22, h: 0.12, d: 0.17, label: 'Messverstärker', displays: 1, knobs: 1, sockets: ['blue', 'black'], color: 'light', dispColor: ['#b7ffd6', '#0b1410'] });
+      amp.position.set(0.3, 0, 0.22); amp.rotation.y = -0.45; scene.add(amp);
+      scene.updateMatrixWorld(true);
+      const wp = o => o.getWorldPosition(new THREE.Vector3());
+      scene.add(cable(THREE, src.socketWorld(0), wp(sK), 0xc4231b, 0.02), cable(THREE, wp(sA), amp.socketWorld(1), 0x151515, 0.02), cable(THREE, src.socketWorld(1), amp.socketWorld(0), 0x1f4fb8, 0.03));
+      // ---- Modell ----
+      const modelG = new THREE.Group(); scene.add(modelG);
+      const phPool = glowPool(THREE, modelG, 60, 0x62e06e, 0.014), ePool = glowPool(THREE, modelG, 60, 0x9fe6ff, 0.008), flPool = glowPool(THREE, modelG, 20, 0xffffff, 0.02);
+      const lPh = label(THREE, 'Photon: E = h·f', { color: '#d8ffd0', size: 0.012 }); lPh.position.set(-0.1, YB + 0.045, 0); modelG.add(lPh);
+      const lE = label(THREE, 'Elektronen', { color: '#9fe6ff', size: 0.012 }); lE.position.set(0.06, YB + 0.07, 0); modelG.add(lE);
+      const anodeW = new THREE.Vector3(0.054, YB, 0);
+      const off = lab.onFrame(() => {
+        const col = new THREE.Color(lineColor(S.line.id)), w = S.warm, model = MM.model;
+        glassF.material.color.copy(col); glassF.material.emissive.copy(col);
+        bulb.material.color.setRGB(0.25 + 0.75 * w, 0.27 + 0.73 * w, 0.3 + 0.7 * w); lampLight.intensity = 1.5 * w;
+        beamM1.opacity = 0.22 * w; beamM2.color.copy(col); beamM2.opacity = (0.08 + 0.18 * S.ap) * w * (model ? 0.45 : 1);
+        spot.material.color.copy(col); spot.material.opacity = 0.5 * S.ap * w;
+        iris.geometry.dispose(); iris.geometry = new THREE.RingGeometry(0.004 + 0.022 * S.ap, 0.031, 40);
+        src.displays[0].draw((S.mode === 'gegen' ? S.U : 0).toFixed(3), 'V'); src.setKnob(0, S.U / 3);
+        amp.displays[0].draw(S.mode === 'gegen' ? fmt(S.I * 1e9, 3) : fmt(S.Uel, 3), S.mode === 'gegen' ? 'nA' : 'V');
+        modelG.visible = model; if (!model) return;
+        phPool.items.forEach((s, i) => { const p = photons[i]; s.visible = !!p; if (!p) return; s.material.color.copy(col); s.position.set(-0.16 + p.u * 0.25, YB + p.y * 0.016 * (1 - p.u * 0.5), p.z * 0.016 * (1 - p.u * 0.5)); });
+        let fi = 0;
+        ePool.items.forEach((s, i) => {
+          const e = electrons[i]; s.visible = !!e; if (!e) return;
+          const start = new THREE.Vector3(0.06 + 0.039 * Math.cos(e.y * 0.6), YB + 0.039 * Math.sin(e.y * 0.6), e.z * 0.02);
+          s.position.copy(start).lerp(anodeW, Math.max(0, e.s) * 0.92);
+          if (e.flash > 0 && fi < flPool.items.length) { const f = flPool.items[fi++]; f.visible = true; f.position.copy(start); f.material.opacity = e.flash * 4; }
+        });
+        for (; fi < flPool.items.length; fi++) flPool.items[fi].visible = false;
+      });
+      return { destroy() { off(); lab.dispose(); } };
+    }
+
+    const host = viewHost(stage, { id: 'photoeffekt', views: { '3d': view3d, '2d': view2d }, initial: '3d', modelInfo: 'Photonen, Elektronen und Energiebilanz' });
+
+    // ---------------- Hauptschleife ----------------
+    let raf = 0, last = performance.now();
+    function loop(now) {
+      raf = requestAnimationFrame(loop);
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
       S.warm += ((S.on ? 1 : 0) - S.warm) * Math.min(1, dt / (S.on ? 1.5 : 0.6));
-      q('pLampGlow').setAttribute('opacity', (S.warm * 0.85).toFixed(2));
-      q('pLampLed').setAttribute('fill', S.on ? '#7fd6a0' : '#333');
-      q('pBeam1').setAttribute('opacity', (S.warm * 0.4).toFixed(2));
-      q('pBeam2').setAttribute('opacity', (S.warm * (0.12 + 0.3 * S.ap)).toFixed(2));
-      // Kennlinie automatisch
       if (S.sweep) {
-        S.sweep.U += dt * 0.6; const U = Math.min(S.sweep.U, Math.max(2, U0of(S.line) + 0.4));
-        sU.set(U); S.U = U;
+        const Uend = Math.max(2, U0of(S.line) + 0.4);
+        S.sweep.U += dt * 0.6; const U = Math.min(S.sweep.U, Uend); sU.set(U); S.U = U;
         S.sweep.c.pts.push([+U.toFixed(3), +((current(U) + gauss(5e-12)) * 1e9).toFixed(4)]);
-        if (U >= Math.max(2, U0of(S.line) + 0.4) - 1e-6) { S.sweep = null; bSweep.disabled = false; toast('Kennlinie aufgenommen.'); }
+        if (U >= Uend - 1e-6) { S.sweep = null; bSweep.disabled = false; toast('Kennlinie aufgenommen.'); }
         redraw();
       }
-      // Kondensatormethode: Aufladen mit Fotostrom
-      if (S.mode === 'kond') {
-        const Cc = 1.0e-10; // F (Zelle + Leitung + Eingang)
-        const I = current(S.Uel); S.Uel = Math.max(0, S.Uel + I / Cc * dt);
-      }
-      // Anzeigen
-      const Ushow = S.mode === 'gegen' ? S.U : S.Uel;
-      q('pDispU').textContent = (S.mode === 'gegen' ? S.U : 0).toFixed(3);
-      if (S.mode === 'gegen') {
-        const I = (current(S.U) + gauss(5e-12)) * 1e9;
-        q('pDispI').textContent = `${fmt(I, 3)} nA`; dI.set(`${fmt(I, 3)} nA`);
-      } else {
-        const u = S.Uel + gauss(0.001);
-        q('pDispI').textContent = `${fmt(u, 3)} V`; dI.set(`${fmt(u, 3)} V`);
-      }
-      // Elektronen
-      spawnAcc += dt * 60 * S.line.qe * S.ap * S.warm;
-      while (spawnAcc > 1) { spawnAcc -= 1; if (parts.length < 120) spawn(); }
-      for (let i = parts.length - 1; i >= 0; i--) {
-        const p = parts[i];
-        const acc = K * K * Ushow / (2 * p.D); // Bremsweg = D genau dann, wenn E_kin = e·U
-        p.v -= acc * dt; p.s += p.v * dt;
-        const f = Math.max(0, p.s) / (p.D + 16);
-        p.el.setAttribute('cx', (p.sx + (AX - p.sx) * f).toFixed(1)); p.el.setAttribute('cy', (p.sy + (AY - p.sy) * f).toFixed(1));
-        if (p.s >= p.D || p.s < 0) { p.el.remove(); parts.splice(i, 1); }
-      }
-      barAcc += dt; if (barAcc > 0.1) { barAcc = 0; energyBars(S.U); }
+      if (S.mode === 'kond') { const Cc = 1.0e-10; S.Uel = Math.max(0, S.Uel + current(S.Uel) / Cc * dt); }
+      S.I = current(S.U) + gauss(5e-12);
+      dI.set(S.mode === 'gegen' ? `${fmt(S.I * 1e9, 3)} nA` : `${fmt(S.Uel + gauss(0.001), 3)} V`);
+      if (host.M.model) stepParticles(dt); else { photons.length = 0; electrons.length = 0; }
     }
-    raf = requestAnimationFrame(frame);
-    return { destroy() { cancelAnimationFrame(raf); chA.destroy(); chB.destroy(); } };
+    raf = requestAnimationFrame(loop);
+    return { destroy() { cancelAnimationFrame(raf); host.destroy(); chA.destroy(); chB.destroy(); } };
   }
 };

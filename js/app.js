@@ -12,12 +12,14 @@ import * as fit from './lib/fit.js';
 const app = document.getElementById('app');
 let cleanup = null;
 const ready = EXPERIMENTS.filter(e => e.status === 'bereit');
+// Bild-URL absolut machen: url() in einer CSS-Variablen wird sonst relativ zur CSS-Datei aufgelöst
+const imgUrl = id => new URL(`bilder/${id}.webp`, location.href.split('#')[0]).href;
 
 function card(e) {
   const r = e.status === 'bereit';
   const inner = `<div class="ic">${icon(e.id)}</div><h3>${e.title}</h3><p>${e.teaser}</p>
-    <div class="meta">${r ? '<span class="tag ready">Durchführbar</span>' : '<span class="tag">In Vorbereitung</span>'}<span class="tag">${e.tech === '3d' ? '3D-Aufbau' : '2D-Aufbau'}</span></div>`;
-  return r ? `<a class="card ready" href="#${e.id}">${inner}</a>` : `<div class="card" aria-disabled="true">${inner}</div>`;
+    <div class="meta">${r ? '<span class="tag ready">Durchführbar</span>' : '<span class="tag">In Vorbereitung</span>'}<span class="tag">${r ? '2D · 3D · Modell' : (e.tech === '3d' ? '3D-Aufbau' : '2D-Aufbau')}</span></div>`;
+  return r ? `<a class="card ready has-img" href="#${e.id}" style="--img:url(${imgUrl(e.id)})">${inner}</a>` : `<div class="card" aria-disabled="true">${inner}</div>`;
 }
 
 function renderHome(scrollTo) {
@@ -69,13 +71,13 @@ async function renderExperiment(meta) {
   document.title = `${meta.title} – Schlüssellabor Physik`;
   app.innerHTML = `
   <div class="wrap">
-    <header class="xhead">
+    <header class="xhead has-img" style="--img:url(${imgUrl(meta.id)})">
       <div class="crumb"><a href="#start">Übersicht</a><span>›</span><a href="#feld-${f.id}">${f.short}</a><span>›</span><span>${meta.title}</span></div>
       <div class="row"><h1 style="font-size:clamp(30px,4vw,48px)">${meta.title}</h1>
         <div class="bar"><a class="btn small" href="#${prev.id}">‹ ${prev.short || prev.title}</a><a class="btn small" href="#${next.id}">${next.short || next.title} ›</a></div></div>
       <p class="x-intro">${meta.teaser}</p>
     </header>
-    <div class="lab"><div class="stage"><div class="loading">Versuchsaufbau wird geladen …</div></div><aside class="controls" aria-label="Bedienfeld"></aside></div>
+    <div class="lab"><div class="stage ratio"><div class="loading">Versuchsaufbau wird geladen …</div></div><aside class="controls" aria-label="Bedienfeld"></aside></div>
     <div class="tabs">
       <div class="tablist" role="tablist">
         ${[['messwerte', 'Messwerte & Auswertung'], ['durchfuehrung', 'Durchführung'], ['theorie', 'Physik dahinter'], ['geraet', 'Apparatur'], ['abi', 'Abi-Check']]
@@ -100,10 +102,11 @@ async function renderExperiment(meta) {
     for (const k of ['durchfuehrung', 'theorie', 'geraet', 'abi']) panel(k).innerHTML = `<div class="prose">${d[k] || '<p class="muted">Folgt.</p>'}</div>`;
     if (mod.intro) app.querySelector('.x-intro').innerHTML = mod.intro;
     inst = await mod.mount({ stage, controls, messwerte: panel('messwerte'), meta, ui, Chart, csvTools, fit });
-    stage.querySelector('.loading')?.remove();
+    stage.querySelector(':scope > .loading')?.remove();
   } catch (err) {
     console.error(err);
-    stage.querySelector('.loading').innerHTML = `Der Versuch konnte nicht geladen werden.<br><span class="muted mono" style="font-size:12px">${String(err.message || err)}</span>`;
+    const ld = stage.querySelector(':scope > .loading') || stage.appendChild(Object.assign(document.createElement('div'), { className: 'loading' }));
+    ld.innerHTML = `Der Versuch konnte nicht geladen werden.<br><span class="muted mono" style="font-size:12px">${String(err.message || err)}</span>`;
   }
   cleanup = () => inst?.destroy?.();
 }

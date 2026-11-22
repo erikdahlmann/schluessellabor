@@ -200,3 +200,46 @@ table.tbl{width:100%;border-collapse:collapse;font-size:14px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 @media (max-width:640px){.stage .hint{display:none}}
+
+/* ---------- Ansichten-Umschalter und Modell ---------- */
+.stage .view{position:absolute;inset:0}
+.view>canvas,.view>svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.vbar{position:absolute;left:12px;top:12px;z-index:6;display:flex;gap:8px;flex-wrap:wrap;max-width:calc(100% - 24px)}
+.vbar .seg{background:rgba(14,17,19,.86);backdrop-filter:blur(6px)}
+.vbar .seg button{min-height:32px;font-size:13px;background:transparent;padding:4px 11px}
+.vbar .seg button.on{background:var(--copper)}
+.modeltag{position:absolute;left:12px;top:56px;z-index:5;font-size:12px;color:#d7cbff;background:rgba(40,30,70,.72);border:1px solid rgba(171,147,255,.45);padding:4px 10px;border-radius:999px;pointer-events:none}
+.modeltag span{color:var(--ink2)}
+.stage.is-model{border-color:rgba(171,147,255,.45);box-shadow:0 0 0 1px rgba(171,147,255,.18) inset}
+.ov{position:absolute;z-index:4;background:rgba(10,12,14,.8);border:1px solid var(--line2);border-radius:10px;padding:8px 10px;font-size:12px;color:var(--ink2);backdrop-filter:blur(6px);pointer-events:none}
+.ov h5{margin:0 0 6px;font:600 12px var(--f-body);color:var(--ink)}
+.ov[hidden]{display:none}
+.legend{display:flex;flex-direction:column;gap:3px}
+.legend i{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.stage .hud{z-index:6}
+.stage .hint{z-index:4}
+.stage[data-view="2d"] .hud3d{display:none}
+
+/* ---------- Kopfbild der Versuchsseite ---------- */
+.xhead{position:relative;isolation:isolate}
+.xhead.has-img{padding:40px 0 34px;min-height:250px}
+.xhead.has-img::before{content:"";position:absolute;top:0;bottom:0;left:calc(50% - 50vw);right:calc(50% - 50vw);z-index:-1;
+  background:linear-gradient(90deg,var(--bg) 22%,rgba(10,12,14,.72) 50%,rgba(10,12,14,.25) 100%),linear-gradient(0deg,var(--bg) 0%,rgba(10,12,14,0) 45%),var(--img) right 30%/cover no-repeat}
+.card.has-img{overflow:hidden}
+.card.has-img::before{content:"";position:absolute;inset:0;z-index:0;background:linear-gradient(180deg,rgba(19,23,26,.55),rgba(19,23,26,.96) 62%),var(--img) center 30%/cover no-repeat;transition:transform .4s}
+.card.has-img:hover::before{transform:scale(1.04)}
+.card.has-img>*{position:relative;z-index:1}
+
+@media (max-width:640px){
+  .stage.ratio{aspect-ratio:auto;height:440px}
+  .vbar .seg button{padding:4px 8px;font-size:12px}
+  .modeltag{top:auto;bottom:12px}
+  .xhead.has-img::before{background:linear-gradient(0deg,var(--bg) 10%,rgba(10,12,14,.78) 60%,rgba(10,12,14,.45)),var(--img) center/cover no-repeat}
+}
+.stage .hud3d{top:auto;bottom:12px;right:12px}
+.stage .hud3d .btn{background:rgba(14,17,19,.86);min-height:32px;font-size:13px}
+.stage .view .hint{bottom:auto;top:auto;left:12px;bottom:12px;max-width:calc(100% - 300px)}
+.stage.is-model .view .hint{display:none}
+@media (max-width:760px){.stage .view .hint{display:none}}
+.vbar .seg button{flex:none}
+@media (max-width:640px){.stage.ratio[data-view="2d"]{height:auto;aspect-ratio:1000/740}}

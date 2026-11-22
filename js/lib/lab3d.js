@@ -106,7 +106,7 @@ export async function createLab(stage, opts = {}) {
   return {
     THREE, scene, camera, renderer, controls, bloom, setRoom,
     onFrame: f => (frameFns.add(f), () => frameFns.delete(f)),
-    dispose() { alive = false; cancelAnimationFrame(raf); ro.disconnect(); io.disconnect(); controls.dispose(); composer.dispose?.(); renderer.dispose(); pmrem.dispose(); renderer.domElement.remove(); }
+    dispose() { alive = false; cancelAnimationFrame(raf); ro.disconnect(); io.disconnect(); controls.dispose(); composer.dispose?.(); renderer.dispose(); pmrem.dispose(); renderer.forceContextLoss(); renderer.domElement.remove(); }
   };
 }
 
@@ -208,9 +208,77 @@ export function cable(THREE, a, b, color = 0xc4231b, sag = 0.12) {
   const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.45 });
   const g = new THREE.Group();
   const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 64, 0.0032, 8, false), mat); tube.castShadow = true; g.add(tube);
+  g.curve = curve;
   for (const [p, q] of [[a, curve.points[0]], [b, curve.points[3]]]) {
     const plug = new THREE.Mesh(new THREE.CylinderGeometry(0.0055, 0.005, 0.03, 14), mat);
     plug.position.copy(p).lerp(q, 0.5); plug.lookAt(q); plug.rotateX(Math.PI / 2); g.add(plug);
   }
   return g;
+}
+
+// ---------------------------------------------------------------------------
+//  Modell-Bausteine: Pfeile, Beschriftungen, Glas, Leuchtpunkte
+// ---------------------------------------------------------------------------
+// Kräftiger 3D-Pfeil (Schaft + Spitze), leuchtend, wird im Bloom sichtbar
+export function arrow(THREE, color = 0xffffff, { radius = 0.0025, head = 0.012 } = {}) {
+  const mat = new THREE.MeshBasicMaterial({ color, toneMapped: false, transparent: true, opacity: 0.95, depthTest: true });
+  const g = new THREE.Group();
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, 1, 10), mat);
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(radius * 2.6, head, 14), mat);
+  g.add(shaft, tip); g.mat = mat;
+  const up = new THREE.Vector3(0, 1, 0), q = new THREE.Quaternion(), d = new THREE.Vector3();
+  g.set = (from, vec) => {
+    const L = vec.length(); g.visible = L > 1e-5; if (!g.visible) return;
+    d.copy(vec).divideScalar(L); q.setFromUnitVectors(up, d);
+    g.position.copy(from); g.quaternion.copy(q);
+    const hl = Math.min(head, L * 0.45);
+    shaft.scale.set(1, Math.max(1e-4, L - hl), 1); shaft.position.y = (L - hl) / 2;
+    tip.scale.set(1, hl / head, 1); tip.position.y = L - hl / 2;
+  };
+  return g;
+}
+// Text-Sprite (immer zur Kamera gedreht)
+export function label(THREE, text, { color = '#ffffff', size = 0.03, bg = 'rgba(10,12,14,.0)' } = {}) {
+  const c = document.createElement('canvas'); const g = c.getContext('2d');
+  const font = '600 64px "IBM Plex Sans", sans-serif'; g.font = font;
+  const w = Math.ceil(g.measureText(text).width) + 24; c.width = w; c.height = 88;
+  g.font = font; g.fillStyle = bg; g.fillRect(0, 0, w, 88);
+  g.fillStyle = color; g.textBaseline = 'middle'; g.shadowColor = 'rgba(0,0,0,.9)'; g.shadowBlur = 8; g.fillText(text, 12, 46);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false, toneMapped: false }));
+  sp.scale.set(size * w / 88, size, 1); sp.renderOrder = 50;
+  return sp;
+}
+// Glas mit Fresnel-Rand (für Röhren, Kolben)
+export function glassMaterial(THREE, tint = [0.62, 0.72, 0.8]) {
+  return new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    uniforms: { room: { value: 0.5 }, tint: { value: new THREE.Vector3(...tint) } },
+    vertexShader: `varying vec3 vN; varying vec3 vV;
+      void main(){ vec4 w = modelMatrix*vec4(position,1.); vN=normalize(mat3(modelMatrix)*normal); vV=normalize(cameraPosition-w.xyz); gl_Position=projectionMatrix*viewMatrix*w; }`,
+    fragmentShader: `uniform float room; uniform vec3 tint; varying vec3 vN; varying vec3 vV;
+      void main(){ vec3 n=normalize(vN); if(!gl_FrontFacing) n=-n; float f=pow(1.-abs(dot(n,vV)),3.);
+        vec3 L=normalize(vec3(.5,.9,.6)); vec3 H=normalize(L+vV); float s=gl_FrontFacing?pow(max(dot(n,H),0.),600.):0.;
+        vec3 col=tint*f*(.25+.55*room)+vec3(1.)*s*(.15+.6*room);
+        float a=.035+.42*f+s*.8; gl_FragColor=vec4(col,a*(gl_FrontFacing?1.:.45)); }`
+  });
+}
+// weicher Leuchtpunkt (Sprite) für Elektronen, Photonen, Lichtflecke
+let GLOWTEX = null;
+export function glowTexture(THREE) {
+  if (GLOWTEX) return GLOWTEX;
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+  const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.25, 'rgba(255,255,255,.75)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = r; g.fillRect(0, 0, 64, 64);
+  GLOWTEX = new THREE.CanvasTexture(c); return GLOWTEX;
+}
+export function glowSprite(THREE, color = 0x86dcff, size = 0.01) {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(THREE), color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+  sp.scale.set(size, size, 1); return sp;
+}
+// Pool gleichartiger Leuchtpunkte (schnell an/aus, Position setzen)
+export function glowPool(THREE, parent, n, color, size) {
+  const items = Array.from({ length: n }, () => { const s = glowSprite(THREE, color, size); s.visible = false; parent.add(s); return s; });
+  return { items, hideAll() { for (const s of items) s.visible = false; } };
 }
