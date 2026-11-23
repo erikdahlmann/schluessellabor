@@ -183,7 +183,7 @@ export default {
 <h3>Ladung aus dem I-t-Diagramm</h3>
 <p>Die Fläche unter dem <i>I</i>-<i>t</i>-Graphen ist die geflossene Ladung: <i>Q = ∫ I dt</i>. Mit <span class="tex">C = \\frac{Q}{U_0}</span> erhält man die Kapazität ganz ohne Kenntnis von <i>R</i>.</p>
 <h3>Linearisierung</h3>
-<p>Trägt man <i>ln(|I|/I₀)</i> gegen <i>t</i> auf, ergibt sich eine Gerade mit der Steigung <span class="tex">-\\frac{1}{\\tau}</span>. So lässt sich der exponentielle Verlauf nachweisen.</p>
+<p>Trägt man <span class="tex">\\ln\\frac{|I|}{I_0}</span> gegen <i>t</i> auf, ergibt sich eine Gerade mit der Steigung <span class="tex">-\\frac{1}{\\tau}</span>. So lässt sich der exponentielle Verlauf nachweisen.</p>
 <h3>Energie</h3>
 <span class="formula tex">E = \\tfrac{1}{2}\\, C\\, U_0^2</span>
 <p>Beim Laden über einen Widerstand wird – unabhängig von <i>R</i> – genau dieselbe Energie im Widerstand in Wärme umgewandelt, wie im Kondensator gespeichert wird.</p>

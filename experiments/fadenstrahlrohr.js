@@ -86,7 +86,7 @@ export default {
 <h3>Auswertung als Gerade</h3>
 <p>Trägt man <i>2·U<sub>A</sub></i> über <i>(B·r)²</i> auf, liegen die Messpunkte auf einer Ursprungsgeraden mit der Steigung <span class="tex">\\frac{e}{m}</span>. Literaturwert: <span class="tex">\\frac{e}{m} = 1{,}759 \\cdot 10^{11}\\,\\frac{\\text{C}}{\\text{kg}}</span>. Mit <i>e</i> aus dem Millikan-Versuch folgt die Elektronenmasse.</p>
 <h3>Schraubenbahn</h3>
-<p>Hat die Geschwindigkeit eine Komponente parallel zum Feld, bleibt diese unverändert, während die senkrechte Komponente eine Kreisbewegung ausführt – zusammen ergibt sich eine Schraubenlinie mit der Ganghöhe <i>h = 2π·m·v<sub>∥</sub>/(e·B)</i>.</p>
+<p>Hat die Geschwindigkeit eine Komponente parallel zum Feld, bleibt diese unverändert, während die senkrechte Komponente eine Kreisbewegung ausführt – zusammen ergibt sich eine Schraubenlinie mit der Ganghöhe <span class="tex">h = \\frac{2\\pi\\, m\\, v_\\parallel}{e\\, B}</span>.</p>
 <h3>Modellgrenzen und Fehlerquellen</h3>
 <ul><li>Die Spulenkonstante des Exemplars weicht um bis zu ±1 % vom Rechenwert ab, außerdem überlagert sich die horizontale Komponente des Erdmagnetfelds (einige µT).</li>
 <li>Die Elektronen verlassen die Anode mit leicht geringerer Energie (Kontaktspannung, Raumladung) – reale Messungen liefern oft etwas zu große oder zu kleine Werte.</li>
