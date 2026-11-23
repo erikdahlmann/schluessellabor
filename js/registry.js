@@ -43,7 +43,7 @@ export const EXPERIMENTS = [
   // --- Wellen & Felder ------------------------------------------------------
   { id: 'federpendel', field: 'wellen-felder', title: 'Federpendel', tech: '3d', status: 'bereit',
     teaser: 'Schwingungsdauer in Abhängigkeit von Masse und Federhärte – mit Ultraschall-Bewegungssensor.' },
-  { id: 'wellenwanne', field: 'wellen-felder', title: 'Wellenwanne', tech: '3d', status: 'geplant',
+  { id: 'wellenwanne', field: 'wellen-felder', title: 'Wellenwanne', tech: '3d', status: 'bereit',
     teaser: 'Kreis- und ebene Wellen, Reflexion, Beugung und Interferenz an der Wasseroberfläche.' },
   { id: 'fadenstrahlrohr', field: 'wellen-felder', title: 'Fadenstrahlrohr', tech: '3d', status: 'bereit',
     teaser: 'Elektronen auf der Kreisbahn im Helmholtz-Feld – Bestimmung der spezifischen Ladung e/m.' },
@@ -67,7 +67,7 @@ export const EXPERIMENTS = [
     teaser: 'Lorentzkraft auf einen stromdurchflossenen Leiter im Hufeisenmagneten.' },
   { id: 'leiterschleife', field: 'elektrodynamik', title: 'Leiterschleife', tech: '3d', status: 'geplant',
     teaser: 'Induktionsspannung bei Bewegung einer Leiterschleife im Magnetfeld.' },
-  { id: 'transformator', field: 'elektrodynamik', title: 'Transformator', tech: '3d', status: 'geplant',
+  { id: 'transformator', field: 'elektrodynamik', title: 'Transformator', tech: '3d', status: 'bereit',
     teaser: 'Spannungs- und Stromübersetzung, belasteter und unbelasteter Trafo.' },
   { id: 'freileitung', field: 'elektrodynamik', title: 'Modellexperiment zu Freileitungen', short: 'Freileitung', tech: '2d', status: 'geplant',
     teaser: 'Energieübertragung mit und ohne Hochspannung – Leitungsverluste im Modell.' },
@@ -81,7 +81,7 @@ export const EXPERIMENTS = [
     teaser: 'Ein Aluminiumring springt von der Spule – Lenz’sche Regel live.' },
 
   // --- Strahlung & Materie --------------------------------------------------
-  { id: 'roentgen', field: 'strahlung', title: 'Röntgenspektren', tech: '2d', status: 'geplant',
+  { id: 'roentgen', field: 'strahlung', title: 'Röntgenspektren', tech: '2d', status: 'bereit',
     teaser: 'Bremsspektrum und charakteristische Linien, Bragg-Reflexion am Kristall.' },
   { id: 'geiger-mueller', field: 'strahlung', title: 'Geiger-Müller-Zählrohr', tech: '2d', status: 'geplant',
     teaser: 'Zählrate, Nullrate und statistische Schwankung beim radioaktiven Zerfall.' },
