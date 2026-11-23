@@ -148,10 +148,10 @@ export default {
 <li>Danach regen immer mehr Elektronen kurz vor dem Gitter Atome an. Ihnen fehlt die Energie, um gegen <i>U<sub>G</sub></i> den Auffänger zu erreichen – der Strom sinkt.</li>
 <li>Bei höherer Spannung gewinnen die Elektronen nach dem Stoß erneut genug Energie: Der Strom steigt wieder, bis ein zweiter Stoß möglich wird, usw.</li>
 </ul>
-<span class="formula">ΔU = U<sub>max,n+1</sub> − U<sub>max,n</sub> ≈ 4,9 V    ⇒    ΔE = e·ΔU ≈ 4,9 eV</span>
+<span class="formula tex">\\Delta U = U_{\\max,\\,n+1} - U_{\\max,\\,n} \\approx 4{,}9\\,\\text{V} \\quad\\Rightarrow\\quad \\Delta E = e\\,\\Delta U \\approx 4{,}9\\,\\text{eV}</span>
 <h3>Ausgesandtes Licht</h3>
 <p>Die angeregten Atome kehren in den Grundzustand zurück und senden ein Photon aus:</p>
-<span class="formula">λ = h·c/ΔE = 1240 eV·nm / 4,89 eV ≈ 254 nm (UV)</span>
+<span class="formula tex">\\lambda = \\frac{h\\, c}{\\Delta E} = \\frac{1240\\,\\text{eV}\\cdot\\text{nm}}{4{,}89\\,\\text{eV}} \\approx 254\\,\\text{nm (UV)}</span>
 <p>Dieses Licht ist unsichtbar.</p>
 <h3>Neon: Leuchtschichten</h3>
 <p>Bei Neon liegt die Anregung bei etwa 18,7 eV, der Abstand der Maxima also bei rund 19 V. Die angeregten Atome geben ihre Energie in zwei Schritten ab; der zweite Schritt (≈ 2 eV) liefert rot-oranges Licht. Wo die Elektronen die Anregungsenergie erreichen, leuchtet das Gas: Es entsteht eine leuchtende Schicht. Bei höherer Spannung wird die Energie früher erreicht – die Schicht wandert zur Kathode, und am Gitter taucht eine zweite auf. So sieht man die Anregungszonen direkt.</p>

@@ -151,16 +151,16 @@ export default {
 <div class="callout">Sicherheit: Quecksilberlampen senden auch UV-Licht aus. Nicht direkt in die Lampe blicken. Heiße Lampen erst nach dem Abkühlen anfassen.</div>`,
     theorie: `
 <h3>Wellenlänge am Gitter</h3>
-<span class="formula">tan α<sub>k</sub> = x<sub>k</sub> / a      λ = g·sin α<sub>k</sub> / k</span>
+<span class="formula tex">\\tan\\alpha_k = \\frac{x_k}{a} \\qquad \\lambda = \\frac{g \\sin\\alpha_k}{k}</span>
 <p>Die Winkel sind groß. Darum wird ohne Kleinwinkelnäherung gerechnet (siehe Versuch Gitter).</p>
 <h3>Linien und Energieniveaus</h3>
 <p>Ein Atom kann nur bestimmte Energien haben. In der Lampe stoßen Elektronen mit den Atomen und heben sie auf ein höheres Niveau. Fällt das Atom auf ein tieferes Niveau zurück, sendet es ein Photon aus. Seine Energie ist genau die Differenz der beiden Niveaus.</p>
-<span class="formula">E<sub>Ph</sub> = h·f = h·c / λ = E<sub>oben</sub> − E<sub>unten</sub>      h·c = 1240 eV·nm</span>
+<span class="formula tex">E_{\\text{Ph}} = h f = \\frac{h\\, c}{\\lambda} = E_{\\text{oben}} - E_{\\text{unten}} \\qquad h\\, c = 1240\\,\\text{eV}\\cdot\\text{nm}</span>
 <p>Weil es nur wenige Niveaus gibt, gibt es nur wenige Energiedifferenzen und damit nur wenige Wellenlängen. Jedes Element hat ein eigenes Niveauschema und darum ein eigenes Linienspektrum. Das nutzt die Spektralanalyse.</p>
 <h3>Wasserstoff: Balmer-Serie</h3>
-<p>Die sichtbaren Linien des Wasserstoffs enden alle auf dem Niveau n = 2. Mit E<sub>n</sub> = −13,6 eV / n² folgt:</p>
-<span class="formula">1/λ = R<sub>H</sub> · (1/2² − 1/n²)      R<sub>H</sub> = 1,097·10⁷ m⁻¹</span>
-<p>Trägt man 1/λ über (1/4 − 1/n²) auf, erhält man eine Ursprungsgerade mit der Steigung R<sub>H</sub>.</p>
+<p>Die sichtbaren Linien des Wasserstoffs enden alle auf dem Niveau n = 2. Mit <span class="tex">E_n = -\\frac{13{,}6\\,\\text{eV}}{n^2}</span> folgt:</p>
+<span class="formula tex">\\frac{1}{\\lambda} = R_H \\left(\\frac{1}{2^2} - \\frac{1}{n^2}\\right) \\qquad R_H = 1{,}097 \\cdot 10^{7}\\,\\text{m}^{-1}</span>
+<p>Trägt man <span class="tex">\\frac{1}{\\lambda}</span> über <span class="tex">\\left(\\frac{1}{4} - \\frac{1}{n^2}\\right)</span> auf, erhält man eine Ursprungsgerade mit der Steigung R<sub>H</sub>.</p>
 <h3>Bezug zum Franck-Hertz-Versuch</h3>
 <p>Beim Quecksilber liegt das Niveau 6³P₁ bei 4,89 eV. Fällt das Atom von dort in den Grundzustand, entsteht UV-Licht mit 254 nm. Das ist dieselbe Energie, die die Elektronen im Franck-Hertz-Versuch abgeben.</p>
 <h3>Modellgrenzen</h3>

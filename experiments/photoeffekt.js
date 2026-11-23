@@ -117,11 +117,11 @@ export default {
     theorie: `
 <h3>Einstein’sche Gleichung</h3>
 <p>Licht besteht aus Photonen der Energie <i>E = h·f</i>. Ein Photon gibt seine ganze Energie an ein Elektron ab. Ein Teil wird gebraucht, um das Elektron aus dem Metall zu lösen (Austrittsarbeit <i>W<sub>A</sub></i>), der Rest ist Bewegungsenergie:</p>
-<span class="formula">h·f = W<sub>A</sub> + E<sub>kin,max</sub></span>
+<span class="formula tex">h f = W_A + E_{\\text{kin,max}}</span>
 <h3>Gegenfeldmethode</h3>
 <p>Die schnellsten Elektronen erreichen die Anode gerade nicht mehr, wenn ihre Bewegungsenergie gleich der Arbeit im Gegenfeld ist:</p>
-<span class="formula">e·U₀ = E<sub>kin,max</sub>    ⇒    U₀ = (h/e)·f − W<sub>A</sub>/e</span>
-<p>Im <i>U₀</i>-<i>f</i>-Diagramm liegen die Messpunkte auf einer Geraden. Die <b>Steigung ist h/e</b>, der Achsenabschnitt <i>−W<sub>A</sub>/e</i>. Der Schnittpunkt mit der f-Achse ist die Grenzfrequenz <i>f<sub>G</sub> = W<sub>A</sub>/h</i>.</p>
+<span class="formula tex">e\\, U_0 = E_{\\text{kin,max}} \\quad\\Rightarrow\\quad U_0 = \\frac{h}{e}\\, f - \\frac{W_A}{e}</span>
+<p>Im <i>U₀</i>-<i>f</i>-Diagramm liegen die Messpunkte auf einer Geraden. Die <b>Steigung ist <span class="tex">\\frac{h}{e}</span></b>, der Achsenabschnitt <span class="tex">-\\frac{W_A}{e}</span>. Der Schnittpunkt mit der f-Achse ist die Grenzfrequenz <span class="tex">f_G = \\frac{W_A}{h}</span>.</p>
 <h3>Was die Wellenvorstellung nicht erklärt</h3>
 <ul><li><i>U₀</i> hängt nicht von der Lichtintensität ab, nur von der Frequenz.</li>
 <li>Unterhalb der Grenzfrequenz werden auch bei großer Helligkeit keine Elektronen ausgelöst.</li>

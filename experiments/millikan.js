@@ -97,12 +97,12 @@ export default {
 <div class="callout">Sicherheit: Am Kondensator liegen bis zu 600 V. Nur bei ausgeschaltetem Netzgerät an den Platten arbeiten.</div>`,
     theorie: `
 <h3>Schweben</h3>
-<p>Im Feld des Kondensators wirkt auf ein Tröpfchen mit der Ladung q die elektrische Kraft F<sub>el</sub> = q·E = q·U/d. Zeigt sie nach oben und ist so groß wie die Gewichtskraft, schwebt es:</p>
-<span class="formula">q · U<sub>s</sub> / d = m · g    ⇒    q = m · g · d / U<sub>s</sub></span>
+<p>Im Feld des Kondensators wirkt auf ein Tröpfchen mit der Ladung q die elektrische Kraft <span class="tex">F_{\\text{el}} = q\\, E = \\frac{q\\, U}{d}</span>. Zeigt sie nach oben und ist so groß wie die Gewichtskraft, schwebt es:</p>
+<span class="formula tex">\\frac{q\\, U_s}{d} = m\\, g \\quad\\Rightarrow\\quad q = \\frac{m\\, g\\, d}{U_s}</span>
 <h3>Masse aus der Sinkgeschwindigkeit</h3>
 <p>Die Masse ist zu klein zum Wiegen. Ohne Feld sinkt das Tröpfchen. Nach Bruchteilen einer Millisekunde ist die Reibungskraft der Luft (Stokes) so groß wie die Gewichtskraft. Ab dann sinkt es gleichförmig:</p>
-<span class="formula">m · g = 6π · η · r · v    mit    m = 4/3 · π · r³ · (ρ<sub>Öl</sub> − ρ<sub>Luft</sub>)</span>
-<span class="formula">⇒  r = √( 9 η v / (2 (ρ<sub>Öl</sub> − ρ<sub>Luft</sub>) g) )</span>
+<span class="formula tex">m\\, g = 6\\pi\\, \\eta\\, r\\, v \\quad\\text{mit}\\quad m = \\tfrac{4}{3}\\pi r^3 \\left(\\rho_{\\text{Öl}} - \\rho_{\\text{Luft}}\\right)</span>
+<span class="formula tex">\\Rightarrow\\quad r = \\sqrt{\\frac{9\\, \\eta\\, v}{2\\left(\\rho_{\\text{Öl}} - \\rho_{\\text{Luft}}\\right) g}}</span>
 <p>Werte: η<sub>Luft</sub> = 1,81·10⁻⁵ Pa·s, ρ<sub>Öl</sub> = 875 kg/m³, ρ<sub>Luft</sub> = 1,2 kg/m³.</p>
 <h3>Quantelung der Ladung</h3>
 <p>Trägt man die gemessenen Ladungen auf, häufen sie sich bei 1,6·10⁻¹⁹ C, 3,2·10⁻¹⁹ C, 4,8·10⁻¹⁹ C und so weiter. Zwischenwerte kommen nicht vor. Jedes Tröpfchen hat eine ganze Zahl von Elektronen zu viel oder zu wenig. Die kleinste Ladung ist die Elementarladung e = 1,602·10⁻¹⁹ C.</p>

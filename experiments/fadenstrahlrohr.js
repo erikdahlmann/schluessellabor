@@ -77,14 +77,14 @@ export default {
     theorie: `
 <h3>Beschleunigung</h3>
 <p>Im elektrischen Feld zwischen Kathode und Anode gewinnt jedes Elektron die Energie <i>e·U<sub>A</sub></i>:</p>
-<span class="formula">e·U<sub>A</sub> = ½·m·v²   ⇒   v = √(2·e·U<sub>A</sub>/m)</span>
+<span class="formula tex">e\\, U_A = \\tfrac{1}{2}\\, m\\, v^2 \\quad\\Rightarrow\\quad v = \\sqrt{\\frac{2\\, e\\, U_A}{m}}</span>
 <h3>Kreisbahn im Magnetfeld</h3>
 <p>Die Lorentzkraft steht senkrecht auf Geschwindigkeit und Feld; sie verrichtet keine Arbeit und wirkt als Zentripetalkraft:</p>
-<span class="formula">e·v·B = m·v²/r   ⇒   e/m = v/(B·r)   ⇒   e/m = 2·U<sub>A</sub>/(B²·r²)</span>
+<span class="formula tex">e\\, v\\, B = \\frac{m\\, v^2}{r} \\quad\\Rightarrow\\quad \\frac{e}{m} = \\frac{v}{B\\, r} \\quad\\Rightarrow\\quad \\frac{e}{m} = \\frac{2\\, U_A}{B^2 r^2}</span>
 <h3>Magnetfeld des Helmholtz-Spulenpaares</h3>
-<span class="formula">B = (4/5)<sup>3/2</sup>·μ₀·N·I/R ≈ 0,743 mT/A · I   (N = 124, R = 0,150 m)</span>
+<span class="formula tex">B = \\left(\\frac{4}{5}\\right)^{3/2} \\frac{\\mu_0\\, N\\, I}{R} \\approx 0{,}743\\,\\frac{\\text{mT}}{\\text{A}} \\cdot I \\qquad (N = 124,\\ R = 0{,}150\\,\\text{m})</span>
 <h3>Auswertung als Gerade</h3>
-<p>Trägt man <i>2·U<sub>A</sub></i> über <i>(B·r)²</i> auf, liegen die Messpunkte auf einer Ursprungsgeraden mit der Steigung <i>e/m</i>. Literaturwert: <i>e/m = 1,759·10¹¹ C/kg</i>. Mit <i>e</i> aus dem Millikan-Versuch folgt die Elektronenmasse.</p>
+<p>Trägt man <i>2·U<sub>A</sub></i> über <i>(B·r)²</i> auf, liegen die Messpunkte auf einer Ursprungsgeraden mit der Steigung <span class="tex">\\frac{e}{m}</span>. Literaturwert: <span class="tex">\\frac{e}{m} = 1{,}759 \\cdot 10^{11}\\,\\frac{\\text{C}}{\\text{kg}}</span>. Mit <i>e</i> aus dem Millikan-Versuch folgt die Elektronenmasse.</p>
 <h3>Schraubenbahn</h3>
 <p>Hat die Geschwindigkeit eine Komponente parallel zum Feld, bleibt diese unverändert, während die senkrechte Komponente eine Kreisbewegung ausführt – zusammen ergibt sich eine Schraubenlinie mit der Ganghöhe <i>h = 2π·m·v<sub>∥</sub>/(e·B)</i>.</p>
 <h3>Modellgrenzen und Fehlerquellen</h3>

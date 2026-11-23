@@ -95,11 +95,11 @@ export default {
     theorie: `
 <h3>Bragg-Bedingung</h3>
 <p>Die Atome im Kristall liegen in parallelen Netzebenen mit dem Abstand d. Strahlen, die an benachbarten Ebenen reflektiert werden, haben den Gangunterschied 2·d·sin θ. Nur wenn er ein Vielfaches von λ ist, verstärken sie sich:</p>
-<span class="formula">n · λ = 2 · d · sin θ      (NaCl: d = 282,0 pm, LiF: d = 201,4 pm)</span>
+<span class="formula tex">n\\,\\lambda = 2\\, d \\sin\\theta \\qquad (\\text{NaCl: } d = 282{,}0\\,\\text{pm},\\ \\text{LiF: } d = 201{,}4\\,\\text{pm})</span>
 <h3>Bremsspektrum und Grenzwellenlänge</h3>
 <p>Elektronen werden in der Anode abgebremst und geben Energie als Photonen ab. Ein Photon kann höchstens die ganze Energie e·U eines Elektrons erhalten. Daraus folgt die kürzeste Wellenlänge (Duane-Hunt-Gesetz):</p>
-<span class="formula">e · U = h · c / λ<sub>min</sub>    ⇒    λ<sub>min</sub> = h · c / (e · U)</span>
-<p>Trägt man λ<sub>min</sub> über 1/U auf, ergibt sich eine Ursprungsgerade mit der Steigung h·c/e.</p>
+<span class="formula tex">e\\, U = \\frac{h\\, c}{\\lambda_{\\min}} \\quad\\Rightarrow\\quad \\lambda_{\\min} = \\frac{h\\, c}{e\\, U}</span>
+<p>Trägt man λ<sub>min</sub> über <span class="tex">\\frac{1}{U}</span> auf, ergibt sich eine Ursprungsgerade mit der Steigung <span class="tex">\\frac{h\\, c}{e}</span>.</p>
 <h3>Charakteristische Linien</h3>
 <p>Schlägt ein Elektron ein Elektron aus der innersten Schale (K) der Anodenatome, rückt ein Elektron aus einer höheren Schale nach. Die Energiedifferenz wird als Photon frei: Kα beim Übergang L → K, Kβ bei M → K. Die Linien entstehen erst, wenn e·U die Bindungsenergie der K-Schale übersteigt (Mo: 20,0 keV, Cu: 8,98 keV).</p>
 <h3>Modellgrenzen</h3>

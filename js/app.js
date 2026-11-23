@@ -100,6 +100,7 @@ async function renderExperiment(meta) {
     mod = (await import(`../experiments/${meta.id}.js`)).default;
     const d = mod.docs || {};
     for (const k of ['durchfuehrung', 'theorie', 'geraet', 'abi']) panel(k).innerHTML = `<div class="prose">${d[k] || '<p class="muted">Folgt.</p>'}</div>`;
+    renderTex(app);
     if (mod.intro) app.querySelector('.x-intro').innerHTML = mod.intro;
     inst = await mod.mount({ stage, controls, messwerte: panel('messwerte'), meta, ui, Chart, csvTools, fit });
     stage.querySelector(':scope > .loading')?.remove();
@@ -120,3 +121,9 @@ function route() {
 }
 window.addEventListener('hashchange', route);
 route();
+
+// Formeln in den Texten mit KaTeX setzen (Blockformeln: .formula.tex, im Text: .tex)
+function renderTex(root) {
+  const go = () => { for (const e of root.querySelectorAll('.tex:not([data-done])')) { try { window.katex.render(e.textContent, e, { displayMode: e.classList.contains('formula'), throwOnError: false, strict: 'ignore' }); e.dataset.done = '1'; } catch (err) { console.error(err); } } };
+  if (window.katex) go(); else window.addEventListener('load', go, { once: true });
+}

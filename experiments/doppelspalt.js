@@ -132,17 +132,17 @@ export default {
 <div class="callout">Sicherheit: Laser der Klasse 2. Nicht in den direkten oder gespiegelten Strahl blicken, keine spiegelnden Gegenstände in den Strahlengang halten.</div>`,
     theorie: `
 <h3>Gangunterschied</h3>
-<p>Von beiden Spalten gehen Elementarwellen aus. In Richtung <i>α</i> haben sie den Gangunterschied <i>Δs = g·sin α</i>. Ist er ein Vielfaches der Wellenlänge, verstärken sich die Wellen (Maximum), bei einem ungeraden Vielfachen von <i>λ/2</i> löschen sie sich aus (Minimum).</p>
-<span class="formula">Maxima: g·sin α<sub>k</sub> = k·λ    Minima: g·sin α<sub>k</sub> = (2k+1)·λ/2</span>
+<p>Von beiden Spalten gehen Elementarwellen aus. In Richtung <i>α</i> haben sie den Gangunterschied <i>Δs = g·sin α</i>. Ist er ein Vielfaches der Wellenlänge, verstärken sich die Wellen (Maximum), bei einem ungeraden Vielfachen von <span class="tex">\\frac{\\lambda}{2}</span> löschen sie sich aus (Minimum).</p>
+<span class="formula tex">\\text{Maxima: } g\\sin\\alpha_k = k\\,\\lambda \\qquad \\text{Minima: } g\\sin\\alpha_k = (2k+1)\\,\\frac{\\lambda}{2}</span>
 <h3>Kleinwinkelnäherung</h3>
-<p>Am Schirm gilt <i>tan α = x/a</i>. Für kleine Winkel ist <i>sin α ≈ tan α</i>. Dann liegen die Maxima äquidistant:</p>
-<span class="formula">x<sub>k</sub> ≈ k·λ·a/g    ⇒    d = λ·a/g    ⇒    λ = d·g/a</span>
+<p>Am Schirm gilt <span class="tex">\\tan\\alpha = \\frac{x}{a}</span>. Für kleine Winkel ist <i>sin α ≈ tan α</i>. Dann liegen die Maxima äquidistant:</p>
+<span class="formula tex">x_k \\approx k\\,\\frac{\\lambda\\, a}{g} \\quad\\Rightarrow\\quad d = \\frac{\\lambda\\, a}{g} \\quad\\Rightarrow\\quad \\lambda = \\frac{d\\, g}{a}</span>
 <p>Bei <i>a</i> = 2 m und <i>x</i> = 5 cm ist der Fehler der Näherung kleiner als 0,1 %.</p>
 <h3>Einfluss der Spaltbreite</h3>
 <p>Jeder einzelne Spalt beugt das Licht ebenfalls. Seine Beugungsfigur bildet die Hüllkurve: Die Helligkeit der Maxima nimmt nach außen ab, bei <i>b·sin α = λ</i> liegt die erste Nullstelle der Hüllkurve.</p>
-<span class="formula">I(α) = I₀ · cos²(π·g·sin α/λ) · [sin(π·b·sin α/λ) / (π·b·sin α/λ)]²</span>
+<span class="formula tex">I(\\alpha) = I_0 \\cos^2\\!\\left(\\frac{\\pi g \\sin\\alpha}{\\lambda}\\right) \\cdot \\left[\\frac{\\sin u}{u}\\right]^2 \\quad\\text{mit}\\quad u = \\frac{\\pi b \\sin\\alpha}{\\lambda}</span>
 <h3>Auswertung als Gerade</h3>
-<p>Trägt man <i>d</i> über <i>a/g</i> auf, liegen alle Messpunkte eines Lasers auf einer Ursprungsgeraden. Ihre Steigung ist <i>λ</i>.</p>
+<p>Trägt man <i>d</i> über <span class="tex">\\frac{a}{g}</span> auf, liegen alle Messpunkte eines Lasers auf einer Ursprungsgeraden. Ihre Steigung ist <i>λ</i>.</p>
 <h3>Modellgrenzen</h3>
 <ul><li>Der Spaltabstand weicht um bis zu ±1,5 % vom Aufdruck ab.</li><li>Das Laserprofil und leichtes Speckle-Rauschen sind nachgebildet, Messfehler entstehen beim Setzen der Marker.</li></ul><h3>Was die Modellansicht zeigt</h3><ul><li><b>Wellenbild</b> (Draufsicht, λ stark vergrößert): Hinter den Spalten breiten sich zwei Elementarwellen aus. Wo Berg auf Berg trifft, entsteht Helligkeit; wo Berg auf Tal trifft, Dunkelheit.</li><li><b>Gangunterschied:</b> Die gestrichelten Wege führen zum Schirmpunkt von Marker 1; Δs wird in Vielfachen von λ angezeigt.</li><li><b>Zeiger:</b> Die Zeiger beider Wellen werden aneinandergesetzt. Die Länge des Summenzeigers zum Quadrat ist die Intensität.</li><li><b>Einzelne Photonen:</b> Jedes Photon trifft an einer zufälligen Stelle auf; die Wahrscheinlichkeit folgt der Intensitätsverteilung. Erst viele Photonen ergeben das Streifenmuster.</li></ul>`,
     geraet: `

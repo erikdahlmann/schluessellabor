@@ -102,20 +102,20 @@ export default {
     theorie: `
 <h3>Induktion im gemeinsamen Kern</h3>
 <p>Der Wechselstrom in der Primärspule erzeugt im Eisen einen magnetischen Fluss Φ, der sich ständig ändert. Der Kern führt diesen Fluss auch durch die Sekundärspule. In jeder Windung beider Spulen wird dieselbe Spannung induziert:</p>
-<span class="formula">U<sub>ind</sub> = −N · dΦ/dt    ⇒    U₁ / N₁ = U₂ / N₂</span>
-<span class="formula">unbelastet:  U₂ / U₁ = N₂ / N₁</span>
+<span class="formula tex">U_{\\text{ind}} = -N\\,\\frac{\\mathrm{d}\\Phi}{\\mathrm{d}t} \\quad\\Rightarrow\\quad \\frac{U_1}{N_1} = \\frac{U_2}{N_2}</span>
+<span class="formula tex">\\text{unbelastet:}\\quad \\frac{U_2}{U_1} = \\frac{N_2}{N_1}</span>
 <h3>Stromübersetzung</h3>
 <p>Fließt sekundär ein großer Strom, muss der Primärkreis die Leistung liefern. Beim idealen Transformator gilt P₁ = P₂, also U₁·I₁ = U₂·I₂:</p>
-<span class="formula">belastet (ideal):  I₁ / I₂ = N₂ / N₁</span>
+<span class="formula tex">\\text{belastet (ideal):}\\quad \\frac{I_1}{I_2} = \\frac{N_2}{N_1}</span>
 <h3>Leerlaufstrom</h3>
 <p>Auch ohne Verbraucher fließt primär ein kleiner Strom. Er baut das Magnetfeld im Kern auf. Weil die Spule einen großen induktiven Widerstand X = ω·L hat, bleibt er klein.</p>
 <h3>Ohne Joch</h3>
-<p>Ohne Joch ist der Eisenkreis offen. Ein großer Teil der Feldlinien schließt sich durch die Luft und erreicht die Sekundärspule nicht (Streufluss). Die Induktivität sinkt stark: Der Leerlaufstrom steigt, U₂ wird deutlich kleiner als N₂/N₁·U₁.</p>
+<p>Ohne Joch ist der Eisenkreis offen. Ein großer Teil der Feldlinien schließt sich durch die Luft und erreicht die Sekundärspule nicht (Streufluss). Die Induktivität sinkt stark: Der Leerlaufstrom steigt, U₂ wird deutlich kleiner als <span class="tex">\\frac{N_2}{N_1}\\, U_1</span>.</p>
 <h3>Hochstrom</h3>
 <p>Mit N₁ = 500 an 230 V und N₂ = 6 entstehen nur etwa 2,8 V. Der Nagel hat aber nur wenige Milliohm. Es fließen mehrere Hundert Ampere, und die Leistung I²·R bringt ihn in Sekunden zum Glühen und Schmelzen.</p>
 <h3>Modellgrenzen</h3>
 <ul><li>Gerechnet wird mit Wicklungswiderständen, Hauptinduktivität und Kopplungsgrad. Eisenverluste und Sättigung fehlen.</li><li>Die Lampe ist als fester Widerstand von 12 Ω gerechnet.</li></ul>
-<h3>Was die Modellansicht zeigt</h3><ul><li>Den magnetischen Fluss im Kern: Die Striche laufen im Takt der Wechselspannung hin und her, ihre Helligkeit folgt |Φ|.</li><li>Ohne Joch die Streufeldlinien durch die Luft.</li><li>Unten die Zeitverläufe U₁(t), Φ(t) und U₂(t). Die Spannung ist groß, wo sich Φ am schnellsten ändert. Rechts U/N für beide Spulen.</li></ul>`,
+<h3>Was die Modellansicht zeigt</h3><ul><li>Den magnetischen Fluss im Kern: Die Striche laufen im Takt der Wechselspannung hin und her, ihre Helligkeit folgt |Φ|.</li><li>Ohne Joch die Streufeldlinien durch die Luft.</li><li>Unten die Zeitverläufe U₁(t), Φ(t) und U₂(t). Die Spannung ist groß, wo sich Φ am schnellsten ändert. Rechts <span class="tex">\\frac{U}{N}</span> für beide Spulen.</li></ul>`,
     geraet: `
 <table class="spec"><tbody>
 <tr><td>Kern</td><td>U-Kern mit Joch, lamelliert, A<sub>L</sub> ≈ 15 µH (ohne Joch ≈ 0,7 µH)</td></tr>

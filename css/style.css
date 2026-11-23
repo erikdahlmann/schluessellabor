@@ -243,3 +243,9 @@ table.tbl{width:100%;border-collapse:collapse;font-size:14px}
 @media (max-width:760px){.stage .view .hint{display:none}}
 .vbar .seg button{flex:none}
 @media (max-width:640px){.stage.ratio[data-view="2d"]{height:auto;aspect-ratio:1000/740}}
+/* LaTeX-Formeln (KaTeX) */
+.formula.tex{font:inherit;font-size:1.08rem;padding:6px 14px}
+.formula.tex .katex-display{margin:.35em 0;text-align:left;overflow-x:auto;overflow-y:hidden}
+.formula.tex .katex-display>.katex{text-align:left}
+.prose .tex .katex{font-size:1.06em}
+.katex{color:var(--ink)}

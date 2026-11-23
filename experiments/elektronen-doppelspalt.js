@@ -76,11 +76,11 @@ export default {
     theorie: `
 <h3>De-Broglie-Wellenlänge</h3>
 <p>Ein Elektron mit dem Impuls p verhält sich bei der Ausbreitung wie eine Welle mit der Wellenlänge</p>
-<span class="formula">λ = h / p    mit    p = √(2·m·e·U)    ⇒    λ = h / √(2·m·e·U)</span>
-<p>Bei 50 kV ist λ ≈ 5,4 pm. Ab etwa 10 kV merkt man die Relativitätstheorie: Der genaue Impuls ist p = √(2·m·e·U·(1 + eU/(2mc²))). Bei 50 kV ist λ dadurch rund 2,4 % kleiner.</p>
+<span class="formula tex">\\lambda = \\frac{h}{p} \\quad\\text{mit}\\quad p = \\sqrt{2\\, m\\, e\\, U} \\quad\\Rightarrow\\quad \\lambda = \\frac{h}{\\sqrt{2\\, m\\, e\\, U}}</span>
+<p>Bei 50 kV ist λ ≈ 5,4 pm. Ab etwa 10 kV merkt man die Relativitätstheorie: Der genaue Impuls ist <span class="tex">p = \\sqrt{2\\, m\\, e\\, U \\left(1 + \\frac{e\\, U}{2\\, m\\, c^2}\\right)}</span>. Bei 50 kV ist λ dadurch rund 2,4 % kleiner.</p>
 <h3>Streifenabstand</h3>
-<p>Wie beim Licht gilt für die Maxima g·sin α<sub>k</sub> = k·λ. Ohne Vergrößerung wäre der Streifenabstand d₀ = λ·a/g. Auf dem Detektor ist er V-mal so groß:</p>
-<span class="formula">d = V · λ · a / g    ⇒    λ = d · g / (V · a)    (a = 0,35 m, V = 20 000)</span>
+<p>Wie beim Licht gilt für die Maxima g·sin α<sub>k</sub> = k·λ. Ohne Vergrößerung wäre der Streifenabstand <span class="tex">d_0 = \\frac{\\lambda\\, a}{g}</span>. Auf dem Detektor ist er V-mal so groß:</p>
+<span class="formula tex">d = \\frac{V \\lambda\\, a}{g} \\quad\\Rightarrow\\quad \\lambda = \\frac{d\\, g}{V a} \\qquad (a = 0{,}35\\,\\text{m},\\ V = 20\\,000)</span>
 <h3>Wahrscheinlichkeitsdeutung</h3>
 <p>Wo ein einzelnes Elektron auftrifft, lässt sich nicht vorhersagen. Vorhersagbar ist nur die Wahrscheinlichkeit: Sie ist proportional zu |ψ|², dem Quadrat der Amplitude der Materiewelle. Viele Elektronen zeigen deshalb das Interferenzmuster, auch wenn sie einzeln nacheinander kommen.</p>
 <h3>Welcher Weg?</h3>

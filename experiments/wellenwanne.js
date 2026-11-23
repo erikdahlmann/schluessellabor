@@ -63,21 +63,21 @@ export default {
 </ol>`,
     theorie: `
 <h3>Grundgleichung</h3>
-<span class="formula">c = λ · f</span>
+<span class="formula tex">c = \\lambda\\, f</span>
 <p>Bei Wasserwellen hängt c von der Wellenlänge und der Wassertiefe ab. In der Wellenwanne wirken Schwerkraft und Oberflächenspannung zusammen:</p>
-<span class="formula">ω² = (g·k + σ·k³/ρ) · tanh(k·h)    mit    k = 2π/λ</span>
+<span class="formula tex">\\omega^2 = \\left(g\\, k + \\frac{\\sigma\\, k^3}{\\rho}\\right) \\tanh(k\\, h) \\quad\\text{mit}\\quad k = \\frac{2\\pi}{\\lambda}</span>
 <h3>Interferenz zweier Erreger</h3>
-<span class="formula">Δs = |s₁ − s₂| = k·λ: Verstärkung    Δs = (2k+1)·λ/2: Auslöschung</span>
+<span class="formula tex">\\Delta s = |s_1 - s_2| = k\\,\\lambda:\\ \\text{Verstärkung} \\qquad \\Delta s = (2k+1)\\,\\frac{\\lambda}{2}:\\ \\text{Auslöschung}</span>
 <p>Die Punkte mit gleichem Δs liegen auf Hyperbeln. Auf den Knotenlinien bleibt das Wasser in Ruhe.</p>
 <h3>Viele Erreger</h3>
-<p>Bei N Erregern im Abstand d überlagern sich N Kreiswellen. Weit weg verstärken sich alle, wenn benachbarte Erreger den Gangunterschied d·sin α = k·λ haben. Mit mehr Erregern werden diese Richtungen schmaler, dazwischen ist es fast ruhig (wie beim optischen Gitter). Eilt jeder Erreger seinem unteren Nachbarn um Δφ voraus, kippt die Hauptrichtung zu den nachhinkenden Erregern hin: d·sin α = (k − Δφ/360°)·λ (α nach oben positiv). So lenkt man auch Radar- und Ultraschallstrahlen. Liegen die Erreger enger als λ, entsteht eine fast ebene Welle (Huygens).</p>
+<p>Bei N Erregern im Abstand d überlagern sich N Kreiswellen. Weit weg verstärken sich alle, wenn benachbarte Erreger den Gangunterschied d·sin α = k·λ haben. Mit mehr Erregern werden diese Richtungen schmaler, dazwischen ist es fast ruhig (wie beim optischen Gitter). Eilt jeder Erreger seinem unteren Nachbarn um Δφ voraus, kippt die Hauptrichtung zu den nachhinkenden Erregern hin: <span class="tex">d \\sin\\alpha = \\left(k - \\frac{\\Delta\\varphi}{360^\\circ}\\right) \\lambda</span> (α nach oben positiv). So lenkt man auch Radar- und Ultraschallstrahlen. Liegen die Erreger enger als λ, entsteht eine fast ebene Welle (Huygens).</p>
 <h3>Beugung an Spalt und Mehrfachspalt</h3>
-<span class="formula">Spalt (Breite b): erste Auslöschung bei b·sin α = λ</span>
-<span class="formula">Mehrfachspalt (Abstand g): Hauptmaxima bei g·sin α = k·λ</span>
+<span class="formula tex">\\text{Spalt (Breite } b\\text{): erste Auslöschung bei } b \\sin\\alpha = \\lambda</span>
+<span class="formula tex">\\text{Mehrfachspalt (Abstand } g\\text{): Hauptmaxima bei } g \\sin\\alpha = k\\,\\lambda</span>
 <h3>Hindernis und Kante</h3>
 <p>Hinter einer Platte entsteht kein scharfer Schatten. Von beiden Rändern gehen Elementarwellen in den Schattenraum. Sie überlagern sich hinter der Mitte der Platte (Babinet: das Feld hinter der Platte ist die ungestörte Welle minus das Feld hinter einem gleich breiten Spalt). An einer Kante dringt die Welle in den Schatten ein, die Wellenberge laufen dort als Kreisbögen um die Kante.</p>
 <h3>Reflexion und Brechung</h3>
-<span class="formula">Reflexion: Einfallswinkel = Reflexionswinkel    Brechung: sin α / sin β = c₁ / c₂ = λ₁ / λ₂</span>
+<span class="formula tex">\\text{Reflexion: Einfallswinkel} = \\text{Reflexionswinkel} \\qquad \\text{Brechung: } \\frac{\\sin\\alpha}{\\sin\\beta} = \\frac{c_1}{c_2} = \\frac{\\lambda_1}{\\lambda_2}</span>
 <h3>Modellgrenzen</h3>
 <ul><li>Die Wanne ist am Rand vollständig gedämpft. Reflexionen an Spaltbacken, Platte und Kante fehlen.</li><li>Die Winkel werden für weit entfernte Punkte gemessen. Nah am Spalt weichen sie etwas ab.</li><li>Die Höhe der Wellen ist im 3D-Aufbau stark vergrößert.</li></ul>
 <h3>Was die Modellansicht zeigt</h3><ul><li>Die Oberfläche als Höhenbild: Wellenberge rot, Wellentäler blau, ruhiges Wasser schwarz.</li><li>Bei zwei Erregern die Wege zu Messpunkt 1 und der Gangunterschied; bei mehr Erregern und beim Mehrfachspalt die Richtungen der Hauptmaxima; beim Spalt die Richtungen der ersten Auslöschung.</li><li>An Öffnungen und Hindernissen die Ausgangspunkte der Elementarwellen, bei Reflexion und Brechung Lot, Wellennormalen und Winkel.</li></ul>`,

@@ -92,14 +92,14 @@ export default {
     theorie: `
 <h3>Lineares Kraftgesetz</h3>
 <p>In der Ruhelage gleichen sich Gewichtskraft und Federkraft aus: <i>m·g = D·s₀</i>. Wird der Körper um <i>y</i> ausgelenkt, wirkt die rücktreibende Kraft <i>F = −D·y</i> – das ist die Bedingung für eine harmonische Schwingung. Die Gewichtskraft verschiebt nur die Ruhelage.</p>
-<span class="formula">m·ÿ = −D·y   ⇒   y(t) = ŷ·cos(ω·t),   ω = √(D/m)</span>
-<span class="formula">T = 2π·√(m/D)</span>
+<span class="formula tex">m\\,\\ddot{y} = -D\\, y \\quad\\Rightarrow\\quad y(t) = \\hat{y}\\cos(\\omega t), \\quad \\omega = \\sqrt{\\frac{D}{m}}</span>
+<span class="formula tex">T = 2\\pi\\sqrt{\\frac{m}{D}}</span>
 <p>Die Periodendauer hängt <b>nicht</b> von der Amplitude und nicht vom Ortsfaktor <i>g</i> ab.</p>
 <h3>Federmasse</h3>
 <p>Eine reale Feder schwingt mit. Näherungsweise wirkt ein Drittel ihrer Masse wie zusätzliche Pendelmasse:</p>
-<span class="formula">T = 2π·√((m + m<sub>F</sub>/3)/D)   ⇒   T² = (4π²/D)·m + (4π²/D)·m<sub>F</sub>/3</span>
+<span class="formula tex">T = 2\\pi\\sqrt{\\frac{m + \\frac{m_F}{3}}{D}} \\quad\\Rightarrow\\quad T^2 = \\frac{4\\pi^2}{D}\\, m + \\frac{4\\pi^2}{D} \\cdot \\frac{m_F}{3}</span>
 <h3>Dämpfung</h3>
-<p>Luftreibung (und im Wasser die Flüssigkeitsreibung) lässt die Amplitude exponentiell abklingen: <i>ŷ(t) = ŷ₀·e<sup>−δt</sup></i> mit <i>δ = b/(2m)</i>. Bei schwacher Dämpfung ändert sich <i>T</i> praktisch nicht.</p>
+<p>Luftreibung (und im Wasser die Flüssigkeitsreibung) lässt die Amplitude exponentiell abklingen: <i>ŷ(t) = ŷ₀·e<sup>−δt</sup></i> mit <span class="tex">\\delta = \\frac{b}{2m}</span>. Bei schwacher Dämpfung ändert sich <i>T</i> praktisch nicht.</p>
 <h3>Energie</h3>
 <p>Kinetische Energie und Spannenergie (bezogen auf die Ruhelage) wandeln sich periodisch ineinander um: <i>E = ½·D·ŷ²</i>.</p>
 <h3>Modellgrenzen dieser Simulation</h3>

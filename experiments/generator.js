@@ -91,9 +91,9 @@ export default {
     theorie: `
 <h3>Magnetischer Fluss</h3>
 <p>Der Fluss durch die Spule hängt von der Stellung ab. Steht die Flächennormale n parallel zu B, ist er am größten:</p>
-<span class="formula">Φ(t) = B · A · cos(ω t)    mit    ω = 2π f</span>
+<span class="formula tex">\\Phi(t) = B\\, A \\cos(\\omega t) \\quad\\text{mit}\\quad \\omega = 2\\pi f</span>
 <h3>Induktionsgesetz</h3>
-<span class="formula">U(t) = −N · dΦ/dt = N · B · A · ω · sin(ω t)    ⇒    Û = N · B · A · ω</span>
+<span class="formula tex">U(t) = -N\\,\\frac{\\mathrm{d}\\Phi}{\\mathrm{d}t} = N B A\\, \\omega \\sin(\\omega t) \\quad\\Rightarrow\\quad \\hat{U} = N B A\\, \\omega</span>
 <p>Die Spannung ist am größten, wenn der Fluss gerade null ist und sich am schnellsten ändert: Die Spulenfläche liegt dann parallel zu den Feldlinien. Ist der Fluss maximal, ist die Spannung null. Û wächst proportional mit f und mit N.</p>
 <h3>Erklärung mit der Lorentzkraft</h3>
 <p>Die beiden Leiterseiten bewegen sich auf einer Kreisbahn durch das Feld. Auf die Elektronen in ihnen wirkt die Lorentzkraft F = e·v·B entlang des Drahtes. Wirksam ist nur der Anteil von v senkrecht zu B, und der ändert sich mit sin(ω t).</p>

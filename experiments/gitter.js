@@ -102,19 +102,19 @@ export default {
     theorie: `
 <h3>Gangunterschied benachbarter Spalte</h3>
 <p>Benachbarte Spalte haben den Abstand <i>g</i>. In Richtung <i>α</i> hat Licht aus zwei Nachbarspalten den Gangunterschied <i>Δs = g·sin α</i>. Ist er ein Vielfaches von <i>λ</i>, kommen die Wellen aller Spalte im Gleichtakt an.</p>
-<span class="formula">Maxima: g·sin α<sub>k</sub> = k·λ    (k = 0, 1, 2, …)</span>
+<span class="formula tex">\\text{Maxima: } g\\sin\\alpha_k = k\\,\\lambda \\qquad (k = 0,\\, 1,\\, 2,\\, \\dots)</span>
 <h3>Auswertung am ebenen Schirm</h3>
 <p>Am Gitter sind die Winkel groß. Die Kleinwinkelnäherung ist hier falsch. Man rechnet exakt:</p>
-<span class="formula">tan α<sub>k</sub> = x<sub>k</sub> / a    ⇒    λ = g·sin α<sub>k</sub> / k</span>
+<span class="formula tex">\\tan\\alpha_k = \\frac{x_k}{a} \\quad\\Rightarrow\\quad \\lambda = \\frac{g \\sin\\alpha_k}{k}</span>
 <p>Beispiel: 600/mm, rotes Licht, a = 1 m. Das 1. Maximum liegt bei x ≈ 41 cm, also α ≈ 22°. Die Näherung sin α ≈ tan α ergäbe λ etwa 8 % zu groß.</p>
 <h3>Warum sind die Maxima so scharf?</h3>
-<p>Bei zwei Spalten wird die Helligkeit langsam schwächer, wenn man sich vom Maximum entfernt. Bei <i>N</i> Spalten reicht schon eine kleine Abweichung: Der Gangunterschied zwischen dem ersten und dem letzten Spalt beträgt dann eine ganze Wellenlänge, und die Wellen löschen sich paarweise aus. Die Breite eines Maximums nimmt mit 1/<i>N</i> ab. Ein Laserfleck beleuchtet einige Hundert Spalte.</p>
-<span class="formula">I(α) = I₀ · [ sin(N·φ/2) / (N·sin(φ/2)) ]²   mit   φ = 2π·g·sin α / λ</span>
+<p>Bei zwei Spalten wird die Helligkeit langsam schwächer, wenn man sich vom Maximum entfernt. Bei <i>N</i> Spalten reicht schon eine kleine Abweichung: Der Gangunterschied zwischen dem ersten und dem letzten Spalt beträgt dann eine ganze Wellenlänge, und die Wellen löschen sich paarweise aus. Die Breite eines Maximums nimmt mit <span class="tex">\\frac{1}{N}</span> ab. Ein Laserfleck beleuchtet einige Hundert Spalte.</p>
+<span class="formula tex">I(\\alpha) = I_0 \\left[\\frac{\\sin\\frac{N\\varphi}{2}}{N \\sin\\frac{\\varphi}{2}}\\right]^2 \\quad\\text{mit}\\quad \\varphi = \\frac{2\\pi g \\sin\\alpha}{\\lambda}</span>
 <h3>Spektren</h3>
 <p>Weißes Licht enthält alle Wellenlängen. Jede Farbe hat ihr eigenes Maximum: Violett wird am wenigsten, Rot am stärksten gebeugt. Das Maximum 0. Ordnung bleibt weiß. Ab der 2. Ordnung überlappen die Spektren: Das Violett der 3. Ordnung liegt schon im Rot der 2. Ordnung.</p>
 <h3>Modellgrenzen</h3>
 <ul><li>Die Gitterkonstante weicht um bis zu ±1 % vom Aufdruck ab.</li><li>Die Helligkeit der Ordnungen folgt einer einfachen Hüllkurve (Spaltbreite ≈ 0,32·g).</li></ul>
-<h3>Was die Modellansicht zeigt</h3><ul><li><b>Wellenbild</b> (Draufsicht, λ stark vergrößert): Hinter N Spalten überlagern sich N Elementarwellen. Nur in wenigen Richtungen entsteht Helligkeit. Mit dem Regler N seht ihr, wie die Richtungen schärfer werden.</li><li><b>Zeigerkette:</b> Jeder Spalt liefert einen Zeiger. Benachbarte Zeiger sind um φ = 2π·Δs/λ gedreht. Im Maximum liegen alle in einer Linie. Schon kurz daneben rollt sich die Kette zu einem Kreis zusammen, und der Summenzeiger wird null.</li></ul>`,
+<h3>Was die Modellansicht zeigt</h3><ul><li><b>Wellenbild</b> (Draufsicht, λ stark vergrößert): Hinter N Spalten überlagern sich N Elementarwellen. Nur in wenigen Richtungen entsteht Helligkeit. Mit dem Regler N seht ihr, wie die Richtungen schärfer werden.</li><li><b>Zeigerkette:</b> Jeder Spalt liefert einen Zeiger. Benachbarte Zeiger sind um <span class="tex">\\varphi = \\frac{2\\pi\\, \\Delta s}{\\lambda}</span> gedreht. Im Maximum liegen alle in einer Linie. Schon kurz daneben rollt sich die Kette zu einem Kreis zusammen, und der Summenzeiger wird null.</li></ul>`,
     geraet: `
 <table class="spec"><tbody>
 <tr><td>Laser</td><td>635 nm · 532 nm · 405 nm, Klasse 2, &lt; 1 mW</td></tr>

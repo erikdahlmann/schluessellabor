@@ -175,21 +175,21 @@ export default {
 <div class="callout">Bei großen Zeitkonstanten (z. B. 4700 µF · 100 kΩ ≈ 8 min) hilft der Zeitraffer. Die Messwerte werden weiterhin mit der eingestellten Abtastrate in Versuchszeit erfasst.</div>`,
     theorie: `
 <h3>Entladen</h3>
-<p>Nach der Maschenregel gilt <i>U<sub>R</sub> + U<sub>C</sub> = 0</i>, also <i>R·I + Q/C = 0</i> bzw. mit <i>I = Q̇</i>: <i>R·Q̇ + Q/C = 0</i>. Lösung:</p>
-<span class="formula">Q(t) = Q₀·e<sup>−t/(R·C)</sup>  ·  U<sub>C</sub>(t) = U₀·e<sup>−t/τ</sup>  ·  I(t) = −(U₀/R)·e<sup>−t/τ</sup></span>
+<p>Nach der Maschenregel gilt <i>U<sub>R</sub> + U<sub>C</sub> = 0</i>, also <span class="tex">R\\, I + \\frac{Q}{C} = 0</span> bzw. mit <i>I = Q̇</i>: <span class="tex">R\\, \\dot{Q} + \\frac{Q}{C} = 0</span>. Lösung:</p>
+<span class="formula tex">Q(t) = Q_0\\, e^{-\\frac{t}{RC}} \\qquad U_C(t) = U_0\\, e^{-\\frac{t}{\\tau}} \\qquad I(t) = -\\frac{U_0}{R}\\, e^{-\\frac{t}{\\tau}}</span>
 <h3>Laden</h3>
-<span class="formula">U<sub>C</sub>(t) = U₀·(1 − e<sup>−t/τ</sup>)  ·  I(t) = (U₀/R)·e<sup>−t/τ</sup>  ·  τ = R·C</span>
+<span class="formula tex">U_C(t) = U_0 \\left(1 - e^{-\\frac{t}{\\tau}}\\right) \\qquad I(t) = \\frac{U_0}{R}\\, e^{-\\frac{t}{\\tau}} \\qquad \\tau = R\\, C</span>
 <p>Nach <i>t = τ</i> ist die Stromstärke auf <b>37 %</b> gefallen (<i>e<sup>−1</sup></i>), beim Laden hat <i>U<sub>C</sub></i> <b>63 %</b> von <i>U₀</i> erreicht. Halbwertszeit: <i>t<sub>H</sub> = τ·ln 2</i>.</p>
 <h3>Ladung aus dem I-t-Diagramm</h3>
-<p>Die Fläche unter dem <i>I</i>-<i>t</i>-Graphen ist die geflossene Ladung: <i>Q = ∫ I dt</i>. Mit <i>C = Q/U₀</i> erhält man die Kapazität ganz ohne Kenntnis von <i>R</i>.</p>
+<p>Die Fläche unter dem <i>I</i>-<i>t</i>-Graphen ist die geflossene Ladung: <i>Q = ∫ I dt</i>. Mit <span class="tex">C = \\frac{Q}{U_0}</span> erhält man die Kapazität ganz ohne Kenntnis von <i>R</i>.</p>
 <h3>Linearisierung</h3>
-<p>Trägt man <i>ln(|I|/I₀)</i> gegen <i>t</i> auf, ergibt sich eine Gerade mit der Steigung <i>−1/τ</i>. So lässt sich der exponentielle Verlauf nachweisen.</p>
+<p>Trägt man <i>ln(|I|/I₀)</i> gegen <i>t</i> auf, ergibt sich eine Gerade mit der Steigung <span class="tex">-\\frac{1}{\\tau}</span>. So lässt sich der exponentielle Verlauf nachweisen.</p>
 <h3>Energie</h3>
-<span class="formula">E = ½·C·U₀²</span>
+<span class="formula tex">E = \\tfrac{1}{2}\\, C\\, U_0^2</span>
 <p>Beim Laden über einen Widerstand wird – unabhängig von <i>R</i> – genau dieselbe Energie im Widerstand in Wärme umgewandelt, wie im Kondensator gespeichert wird.</p>
 <h3>Modellgrenzen dieser Simulation</h3>
 <ul><li>Elko-Toleranz: Die tatsächliche Kapazität weicht wie bei realen Bauteilen um −10 % … +20 % vom Aufdruck ab (pro Seitenaufruf fest).</li>
-<li>Leckstrom des Elkos über ca. 2 MΩ, Innenwiderstand der Spannungsmessung 10 MΩ, Strommessung 1 Ω. Rauschen und 12-bit-Auflösung des Interfaces sind nachgebildet.</li></ul><h3>Was die Modellansicht zeigt</h3><ul><li><b>Elektronen</b> (Punkte) bewegen sich in den Leitungen <b>entgegen</b> der technischen Stromrichtung (gestrichelt).</li><li>Kein Elektron fließt durch den Kondensator. Beim Laden sammeln sich Elektronen auf der einen Platte, auf der anderen fehlen sie gleich viele: beide Platten tragen den gleichen Betrag Q.</li><li>Mit der Ladung wächst das elektrische Feld zwischen den Platten und damit U<sub>C</sub> = Q/C. Je größer U<sub>C</sub>, desto langsamer wandern die Elektronen – der Strom klingt exponentiell ab.</li></ul>`,
+<li>Leckstrom des Elkos über ca. 2 MΩ, Innenwiderstand der Spannungsmessung 10 MΩ, Strommessung 1 Ω. Rauschen und 12-bit-Auflösung des Interfaces sind nachgebildet.</li></ul><h3>Was die Modellansicht zeigt</h3><ul><li><b>Elektronen</b> (Punkte) bewegen sich in den Leitungen <b>entgegen</b> der technischen Stromrichtung (gestrichelt).</li><li>Kein Elektron fließt durch den Kondensator. Beim Laden sammeln sich Elektronen auf der einen Platte, auf der anderen fehlen sie gleich viele: beide Platten tragen den gleichen Betrag Q.</li><li>Mit der Ladung wächst das elektrische Feld zwischen den Platten und damit <span class="tex">U_C = \\frac{Q}{C}</span>. Je größer U<sub>C</sub>, desto langsamer wandern die Elektronen – der Strom klingt exponentiell ab.</li></ul>`,
     geraet: `
 <table class="spec"><tbody>
 <tr><td>Netzgerät</td><td>0 … 12 V Gleichspannung</td></tr>

@@ -111,13 +111,13 @@ export default {
     theorie: `
 <h3>Lorentzkraft auf einen Leiter</h3>
 <p>Im Leiter bewegen sich Elektronen. Auf jedes wirkt im Magnetfeld die Lorentzkraft. Alle Kräfte zusammen ergeben die Kraft auf den Leiter. Steht der Leiter senkrecht zum Feld, gilt:</p>
-<span class="formula">F = I · l · B</span>
-<p>l ist die Länge des Leiterstücks im Feld. Daraus folgt die Definition der magnetischen Flussdichte: B = F / (I·l), Einheit 1 T = 1 N/(A·m).</p>
+<span class="formula tex">F = I\\, l\\, B</span>
+<p>l ist die Länge des Leiterstücks im Feld. Daraus folgt die Definition der magnetischen Flussdichte: <span class="tex">B = \\frac{F}{I\\, l}</span>, Einheit <span class="tex">1\\,\\text{T} = 1\\,\\frac{\\text{N}}{\\text{A}\\cdot\\text{m}}</span>.</p>
 <h3>Richtung</h3>
 <p>Rechte-Hand-Regel für die technische Stromrichtung: Daumen in Stromrichtung, Zeigefinger in Feldrichtung (von N nach S), dann zeigt der Mittelfinger in Kraftrichtung. Für die Elektronen gilt dieselbe Regel mit der linken Hand. Polt man den Strom um oder dreht den Magneten, kehrt sich die Kraft um. Macht man beides, bleibt sie gleich.</p>
 <h3>Kraft aus der Auslenkung</h3>
 <p>Im Gleichgewicht heben sich Gewichtskraft, Lorentzkraft und die Kraft der Drähte auf. Die Drähte zeigen in Richtung der Summe aus F<sub>G</sub> und F<sub>L</sub>:</p>
-<span class="formula">tan φ = F<sub>L</sub> / (m·g)    sin φ = s / L    ⇒    F<sub>L</sub> = m·g·tan φ</span>
+<span class="formula tex">\\tan\\varphi = \\frac{F_L}{m\\, g} \\qquad \\sin\\varphi = \\frac{s}{L} \\quad\\Rightarrow\\quad F_L = m\\, g \\tan\\varphi</span>
 <h3>Feldlinienbild</h3>
 <p>Das kreisförmige Feld um den Leiter und das Feld des Magneten überlagern sich. Auf einer Seite zeigen beide in dieselbe Richtung, das Feld wird stärker. Auf der anderen Seite schwächen sie sich. Der Leiter wird zur Seite mit dem schwächeren Feld gedrückt.</p>
 <h3>Modellgrenzen</h3>
