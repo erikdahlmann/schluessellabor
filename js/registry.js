@@ -49,7 +49,7 @@ export const EXPERIMENTS = [
     teaser: 'Elektronen auf der Kreisbahn im Helmholtz-Feld – Bestimmung der spezifischen Ladung e/m.' },
   { id: 'doppelspalt', field: 'wellen-felder', title: 'Doppelspalt', tech: '2d', status: 'bereit',
     teaser: 'Interferenz von Laserlicht – Wellenlängenbestimmung aus dem Streifenmuster.' },
-  { id: 'gitter', field: 'wellen-felder', title: 'Gitter', tech: '2d', status: 'geplant',
+  { id: 'gitter', field: 'wellen-felder', title: 'Gitter', tech: '2d', status: 'bereit',
     teaser: 'Scharfe Maxima am optischen Gitter, Spektren weißen Lichts.' },
   { id: 'millikan', field: 'wellen-felder', title: 'Millikan-Versuch', tech: '3d', status: 'geplant',
     teaser: 'Schwebende Öltröpfchen im Kondensatorfeld – die Quantelung der Ladung.' },
@@ -63,7 +63,7 @@ export const EXPERIMENTS = [
     teaser: 'Einzelne Elektronen bauen ein Interferenzmuster auf – Wahrscheinlichkeitsdeutung.' },
 
   // --- Elektrodynamik -------------------------------------------------------
-  { id: 'leiterschaukel', field: 'elektrodynamik', title: 'Leiterschaukel', tech: '3d', status: 'geplant',
+  { id: 'leiterschaukel', field: 'elektrodynamik', title: 'Leiterschaukel', tech: '3d', status: 'bereit',
     teaser: 'Lorentzkraft auf einen stromdurchflossenen Leiter im Hufeisenmagneten.' },
   { id: 'leiterschleife', field: 'elektrodynamik', title: 'Leiterschleife', tech: '3d', status: 'geplant',
     teaser: 'Induktionsspannung bei Bewegung einer Leiterschleife im Magnetfeld.' },
@@ -87,7 +87,7 @@ export const EXPERIMENTS = [
     teaser: 'Zählrate, Nullrate und statistische Schwankung beim radioaktiven Zerfall.' },
   { id: 'flammenfaerbung', field: 'strahlung', title: 'Flammenfärbung', tech: '2d', status: 'geplant',
     teaser: 'Metallsalze färben die Flamme charakteristisch – Spektroskopie im Alltag.' },
-  { id: 'linienspektren', field: 'strahlung', title: 'Linienspektren bzw. Spektralanalyse', short: 'Linienspektren', tech: '2d', status: 'geplant',
+  { id: 'linienspektren', field: 'strahlung', title: 'Linienspektren bzw. Spektralanalyse', short: 'Linienspektren', tech: '2d', status: 'bereit',
     teaser: 'Spektrallampen am Gitter – Energieniveaus aus Spektrallinien.' },
   { id: 'franck-hertz', field: 'strahlung', title: 'Franck-Hertz-Versuch', tech: '2d', status: 'bereit',
     teaser: 'Diskrete Energieabgabe von Elektronen an Quecksilber- oder Neonatome.' },
