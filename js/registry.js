@@ -51,7 +51,7 @@ export const EXPERIMENTS = [
     teaser: 'Interferenz von Laserlicht – Wellenlängenbestimmung aus dem Streifenmuster.' },
   { id: 'gitter', field: 'wellen-felder', title: 'Gitter', tech: '2d', status: 'bereit',
     teaser: 'Scharfe Maxima am optischen Gitter, Spektren weißen Lichts.' },
-  { id: 'millikan', field: 'wellen-felder', title: 'Millikan-Versuch', tech: '3d', status: 'geplant',
+  { id: 'millikan', field: 'wellen-felder', title: 'Millikan-Versuch', tech: '3d', status: 'bereit',
     teaser: 'Schwebende Öltröpfchen im Kondensatorfeld – die Quantelung der Ladung.' },
   { id: 'zyklotron', field: 'wellen-felder', title: 'Zyklotron', tech: '2d', status: 'geplant',
     teaser: 'Teilchenbeschleunigung durch Wechselfeld und Magnetfeld (Modellexperiment).' },
@@ -59,7 +59,7 @@ export const EXPERIMENTS = [
   // --- Quantenobjekte -------------------------------------------------------
   { id: 'photoeffekt', field: 'quanten', title: 'Photoeffekt', tech: '2d', status: 'bereit',
     teaser: 'Gegenfeldmethode mit Fotozelle – Bestimmung des Planck’schen Wirkungsquantums.' },
-  { id: 'elektronen-doppelspalt', field: 'quanten', title: 'Doppelspaltversuch mit Elektronen', short: 'Elektronen-Doppelspalt', tech: '2d', status: 'geplant',
+  { id: 'elektronen-doppelspalt', field: 'quanten', title: 'Doppelspaltversuch mit Elektronen', short: 'Elektronen-Doppelspalt', tech: '2d', status: 'bereit',
     teaser: 'Einzelne Elektronen bauen ein Interferenzmuster auf – Wahrscheinlichkeitsdeutung.' },
 
   // --- Elektrodynamik -------------------------------------------------------
@@ -75,7 +75,7 @@ export const EXPERIMENTS = [
     teaser: 'RC-Glied mit Messwerterfassung: Zeitkonstante, Ladung und Kapazität bestimmen.' },
   { id: 'oszilloskop', field: 'elektrodynamik', title: 'Oszilloskop bzw. Messwerterfassungssystem', short: 'Oszilloskop', tech: '2d', status: 'geplant',
     teaser: 'Zeitlich veränderliche Spannungen sichtbar machen und auswerten.' },
-  { id: 'generator', field: 'elektrodynamik', title: 'Generator', tech: '3d', status: 'geplant',
+  { id: 'generator', field: 'elektrodynamik', title: 'Generator', tech: '3d', status: 'bereit',
     teaser: 'Rotierende Spule im Magnetfeld – sinusförmige Wechselspannung.' },
   { id: 'thomson-ring', field: 'elektrodynamik', title: 'Thomson’scher Ringversuch', tech: '3d', status: 'geplant',
     teaser: 'Ein Aluminiumring springt von der Spule – Lenz’sche Regel live.' },
