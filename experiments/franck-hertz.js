@@ -160,7 +160,7 @@ export default {
 <h3>Einfluss der Temperatur</h3>
 <p>Höhere Temperatur bedeutet mehr Hg-Atome und eine kürzere freie Weglänge. Die Elektronen stoßen dann sofort, wenn sie 4,9 eV erreichen: Die Maxima werden schärfer, der Strom insgesamt kleiner. Bei zu niedriger Temperatur verschwimmt die Struktur.</p>
 <h3>Modellgrenzen</h3>
-<ul><li>Die Kennlinie stammt aus einem einfachen Monte-Carlo-Modell mit einer Anregungsstufe; höhere Niveaus (z. B. 6,7 eV) und Ionisation sind nicht berücksichtigt.</li><li>Die Kontaktspannung ist pro Seitenaufruf zufällig (Hg 1,8 … 2,2 V, Ne 0,8 … 1,2 V). Die Lage der Neon-Leuchtschichten ist aus der Energiebilanz berechnet; Streuung und Raumladung verschieben sie im echten Versuch etwas.</li></ul><h3>Was die Modellansicht zeigt</h3><ul><li><b>Elektronen</b> werden zum Gitter beschleunigt. Erreichen sie die Anregungsenergie, stoßen sie mit einem Gasatom (Lichtblitz) und verlieren genau E<sub>A</sub>.</li><li>Dunkle Elektronen haben zu wenig Energie, um gegen die Gegenspannung den Auffänger zu erreichen.</li><li>Die <b>Energieleiter</b> zeigt den Sägezahn: Energie gewinnen, abgeben, wieder gewinnen.</li></ul>`,
+<ul><li>Die Kennlinie stammt aus einem einfachen Monte-Carlo-Modell mit einer Anregungsstufe; höhere Niveaus (z. B. 6,7 eV) und Ionisation sind nicht berücksichtigt.</li><li>Die Kontaktspannung ist pro Seitenaufruf zufällig (Hg 1,8 … 2,2 V, Ne 0,8 … 1,2 V). Die Lage der Neon-Leuchtschichten ist aus der Energiebilanz berechnet; Streuung und Raumladung verschieben sie im echten Versuch etwas.</li></ul><h3>Was die Modellansicht zeigt</h3><ul><li><b>Elektronen</b> starten fast in Ruhe an der Kathode und werden im homogenen Feld gleichmäßig beschleunigt: Sie werden immer schneller (längerer Schweif, hellere Farbe). Es gilt E<sub>kin</sub> = ½·m·v², also v ~ √E.</li><li>Erst wenn E<sub>kin</sub> die Anregungsenergie E<sub>A</sub> erreicht, kann ein Stoß Energie übertragen (Lichtblitz). Das Elektron verliert genau E<sub>A</sub>, ist danach fast in Ruhe und wird wieder beschleunigt.</li><li>Hinter dem Gitter bremst die Gegenspannung. Langsame (dunkle) Elektronen kehren um und erreichen den Auffänger nicht.</li><li>Die <b>Energieleiter</b> zeigt den Sägezahn: Energie gewinnen, abgeben, wieder gewinnen.</li></ul>`,
     geraet: `
 <table class="spec"><tbody>
 <tr><td>Röhre</td><td>Tetrode/Triode mit Hg-Tropfen, Abstand K–G ≈ 8 mm</td></tr>
@@ -284,19 +284,40 @@ export default {
 
     // ---- Teilchenmodell (gemeinsam): x = 0 Kathode … 1 Gitter … 1,2 Auffänger ----
     const parts = [], flashes = []; let spawnAcc = 0;
+    // Kinematik: E = ½·m·v²  →  v ~ √E. Das Feld zwischen Kathode und Gitter ist homogen,
+    // das Elektron wird also gleichmäßig beschleunigt. Nach einem Stoß hat es fast keine
+    // Bewegungsenergie mehr und startet wieder (fast) aus der Ruhe. Hinter dem Gitter bremst U_G.
+    const VK = 0.55, V0 = 0.015;           // Bildschirm-Geschwindigkeit bei E = E_A, Mindesttempo
+    const vOf = (E, g) => V0 + VK * Math.sqrt(Math.max(0, E) / g.EA);
     function stepParticles(dt) {
       const g = S.gas, Ueff = Math.max(0, S.U - g.UK), L = pathRatio(g, S.T);
-      spawnAcc += dt * 34 * Math.min(1, Ueff / (g.EA * 1.5));
-      while (spawnAcc > 1) { spawnAcc -= 1; if (parts.length < 70) parts.push({ x: 0, y: Math.random() * 2 - 1, E: Math.random() * 0.4 }); }
+      const active = !g.oven || S.T > 140;
+      spawnAcc += dt * 26 * Math.min(1, Ueff / (g.EA * 1.5));
+      while (spawnAcc > 1) { spawnAcc -= 1; if (parts.length < 70) parts.push({ x: 0, y: Math.random() * 2 - 1, E: Math.random() * 0.06 * g.EA, dir: 1, hit: 0 }); }
+      const n = 4, h = dt / n;             // Teilschritte: sonst springen schnelle Elektronen über Stoßorte
       for (let i = parts.length - 1; i >= 0; i--) {
-        const p = parts[i], dx = dt * (0.16 + 0.05 * Math.sqrt(Math.max(0, p.E) / g.EA * 5));
-        if (p.x < 1) { p.E += Ueff * dx; if (p.E >= g.EA && Math.random() < 1 - Math.exp(-L * dx)) { p.E -= g.EA; if (flashes.length < 80) flashes.push({ x: p.x, y: p.y, ttl: 0.35 }); } }
-        else p.E -= S.Ug * dx / 0.2;
-        p.x += dx;
-        if (p.x >= 1.2 || (p.x > 1 && p.E <= 0)) parts.splice(i, 1);
+        const p = parts[i]; let gone = false;
+        if (p.hit > 0) p.hit -= dt;
+        for (let k = 0; k < n && !gone; k++) {
+          const dx = vOf(p.E, g) * h * p.dir;
+          if (p.x < 1) {
+            p.E += Ueff * dx;              // Energiegewinn = e·E-Feld·Weg
+            if (active && p.E >= g.EA && Math.random() < 1 - Math.exp(-L * dx)) {
+              p.E -= g.EA; p.hit = 0.25;
+              if (flashes.length < 80) flashes.push({ x: p.x, y: p.y, ttl: 0.35 });
+            }
+          } else p.E -= S.Ug * dx / 0.2;   // Gegenfeld: bremst auf dem Hinweg, beschleunigt zurück
+          p.x += dx;
+          if (p.x > 1 && p.E <= 0.002 * g.EA && p.dir > 0) { p.dir = -1; p.E = 0.002 * g.EA; }
+          if (p.x >= 1.2 || (p.dir < 0 && p.x <= 1)) gone = true;
+        }
+        if (gone) parts.splice(i, 1);
       }
       for (let i = flashes.length - 1; i >= 0; i--) { flashes[i].ttl -= dt; if (flashes[i].ttl <= 0) flashes.splice(i, 1); }
     }
+    // Farbe und Schweif nach Geschwindigkeit
+    const eFrac = p => Math.min(1, Math.max(0, p.E) / S.gas.EA);
+    const eCol = p => { const f = eFrac(p); return `rgb(${Math.round(60 + 150 * f)},${Math.round(90 + 150 * f)},${Math.round(110 + 145 * f)})`; };
     // Leuchtschichten in Neon: dort, wo die Elektronen n·E_A erreichen
     function zones() {
       const g = S.gas, Ueff = Math.max(0, S.U - g.UK); if (g.id !== 'ne' || Ueff < g.EA) return [];
@@ -335,7 +356,7 @@ export default {
         q('fZones').innerHTML = zones().map(z => `<ellipse cx="${px(z.x).toFixed(1)}" cy="190" rx="${Math.max(4, z.w * 123).toFixed(1)}" ry="26" fill="#ff7a2a" opacity="${z.a.toFixed(2)}"/>`).join('');
         // Modell
         q('fModelG').setAttribute('opacity', model ? 1 : 0); q('fAtoms').style.display = model ? '' : 'none';
-        q('fElec').innerHTML = model ? parts.map(p => `<circle cx="${px(p.x).toFixed(1)}" cy="${py(p.y).toFixed(1)}" r="2" fill="${p.E < 0.4 ? '#4c6f80' : '#86dcff'}"/>`).join('') : '';
+        q('fElec').innerHTML = model ? parts.map(p => { const x = px(p.x), y = py(p.y), c = eCol(p), t = vOf(p.E, g) * 60 * p.dir; return `<line x1="${(x - t).toFixed(1)}" y1="${y.toFixed(1)}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${c}" stroke-width="1.6" stroke-linecap="round" opacity=".55"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${p.hit > 0 ? 3 : 2}" fill="${c}"/>`; }).join('') : '';
         q('fFlash').innerHTML = model ? flashes.map(f => `<circle cx="${px(f.x).toFixed(1)}" cy="${py(f.y).toFixed(1)}" r="${(3 + 5 * f.ttl / 0.35).toFixed(1)}" fill="${g.flash}" opacity="${(f.ttl / 0.35).toFixed(2)}"/>`).join('') : '';
         acc++;
         if (acc % 4 === 0) {
@@ -415,7 +436,7 @@ export default {
         const g = S.gas, hg = g.oven, model = MM.model;
         oven.visible = hg; nstand.visible = !hg;
         const hgl = Math.max(0, Math.min(1, (S.T - 40) / 170));
-        coilMat.color.setRGB(1.4 * hgl * (S.heat ? 1 : 0.4), 0.45 * hgl * hgl, 0.1 * hgl ** 3); heatLight.intensity = hg ? 0.6 * hgl : 0;
+        coilMat.color.setRGB(0.95 * hgl * (S.heat ? 1 : 0.5), 0.28 * hgl * hgl, 0.05 * hgl ** 3); heatLight.intensity = 0; inner.material.emissive.setRGB(0.55, 0.16, 0.03); inner.material.emissiveIntensity = hg ? 0.3 * hgl : 0;
         const th = Math.min(0.15, Math.max(0.005, (S.T - 10) / 220 * 0.15)); merc.scale.y = th; merc.position.set(0.1, 0.285 + th / 2, 0);
         // Leuchtschichten
         const zs = zones();
@@ -433,7 +454,7 @@ export default {
           scTex.needsUpdate = true;
         }
         modelG.visible = model; if (!model) return;
-        ePool.items.forEach((s, i) => { const p = parts[i]; s.visible = !!p; if (p) { s.position.set(X3(p.x), p.y * 0.016, (p.y * 7.3 % 1 - 0.5) * 0.03); s.material.color.set(p.E < 0.4 ? 0x4c6f80 : 0x86dcff); } });
+        ePool.items.forEach((s, i) => { const p = parts[i]; s.visible = !!p; if (p) { s.position.set(X3(p.x), p.y * 0.016, (p.y * 7.3 % 1 - 0.5) * 0.03); s.material.color.set(eCol(p)); s.scale.setScalar(0.005 * (0.7 + 0.8 * eFrac(p))); } });
         fPool.items.forEach((s, i) => { const f = flashes[i]; s.visible = !!f; if (f) { s.position.set(X3(f.x), f.y * 0.016, (f.y * 7.3 % 1 - 0.5) * 0.03); s.material.color.set(g.flash); s.material.opacity = f.ttl / 0.35; } });
       });
       return { destroy() { off(); lab.dispose(); } };
