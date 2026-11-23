@@ -50,8 +50,15 @@ const svgMarkup = () => `
 <path id="gPhiTr" fill="none" stroke="#c7b6ff" stroke-width="2" opacity="0"/>
 <path id="gTr" fill="none" stroke="#7dffb8" stroke-width="2.4" filter="url(#gGl)"/>
 <circle id="gDot" r="4" fill="#c8ffe0"/>
+<g id="gCur">
+  <line id="gCu1" x1="556" x2="856" stroke="#ffd27a" stroke-width="1.4" stroke-dasharray="6 4"/><line id="gCu2" x1="556" x2="856" stroke="#ffd27a" stroke-width="1.4" stroke-dasharray="6 4"/>
+  <line id="gCt1" y1="60" y2="300" stroke="#86dcff" stroke-width="1.4" stroke-dasharray="6 4"/><line id="gCt2" y1="60" y2="300" stroke="#86dcff" stroke-width="1.4" stroke-dasharray="6 4"/>
+  <line id="gCu1h" data-c="u1" x1="556" x2="856" stroke="transparent" stroke-width="14" style="cursor:ns-resize"/><line id="gCu2h" data-c="u2" x1="556" x2="856" stroke="transparent" stroke-width="14" style="cursor:ns-resize"/>
+  <line id="gCt1h" data-c="t1" y1="60" y2="300" stroke="transparent" stroke-width="14" style="cursor:ew-resize"/><line id="gCt2h" data-c="t2" y1="60" y2="300" stroke="transparent" stroke-width="14" style="cursor:ew-resize"/>
+</g>
+<text id="gFrz" x="850" y="76" fill="#ff8a7a" font-size="11" text-anchor="end"></text>
 <text id="gScopeT" x="562" y="316" fill="#333" font-size="11" font-family="IBM Plex Mono, monospace"></text>
-<text x="872" y="80" fill="#333" font-size="11">Oszilloskop</text>
+<text x="872" y="80" fill="#333" font-size="11">Cursor</text>
 <text id="gUhat" x="872" y="108" fill="#222" font-size="12" font-family="IBM Plex Mono, monospace"></text>
 <text id="gTT" x="872" y="126" fill="#222" font-size="12" font-family="IBM Plex Mono, monospace"></text>
 <text id="gLeg1" x="872" y="160" fill="#1a7a4c" font-size="11" opacity="1">— U(t)</text>
@@ -77,7 +84,7 @@ export default {
 <ol>
 <li>Motor mit kleiner Drehfrequenz starten und die Spannung am Oszilloskop beobachten. Passende Zeit- und Spannungsablenkung wählen.</li>
 <li>Bei der Stellung der Spule, in der die Spannung null ist, kurz anhalten: Wie steht die Spule zu den Feldlinien?</li>
-<li>Scheitelwert Û für f = 1 … 10 Hz messen und <b>übernehmen</b>. Mit anderen Spulen wiederholen.</li>
+<li>Bild anhalten. Die gelben Cursor auf Maximum und Minimum ziehen (ΔU = 2·Û), die blauen auf zwei gleiche Stellen im Abstand einer Periode (Δt = T). <b>Messwert übernehmen.</b> Für f = 1 … 10 Hz und mit anderen Spulen wiederholen.</li>
 <li>Lampe zuschalten. Die Antriebsleistung beobachten.</li>
 <li>Auf Kommutator umschalten und den Verlauf der Spannung vergleichen.</li>
 </ol>`,
@@ -114,7 +121,7 @@ export default {
 
   async mount({ stage, controls, messwerte, ui, Chart, csvTools, fit }) {
     const { el, group, slider, segmented, check, button, fmt, dataTable, toast, display, gauss } = ui;
-    const S = { f: 2, N: 400, run: true, comm: false, lamp: false, phi: 0.3, vdiv: 1, tdiv: 0.1, buf: [], t: 0 };
+    const S = { frozen: false, snap: null, cu: { u1: 1, u2: -1, t1: 0.15, t2: 0.65 }, f: 2, N: 400, run: true, comm: false, lamp: false, phi: 0.3, vdiv: 1, tdiv: 0.1, buf: [], t: 0 };
     const omega = () => 2 * Math.PI * S.f;
     const Uhat = () => S.N * B * AREA * omega();
     const Uof = phi => { const u = Uhat() * Math.sin(phi); return S.comm ? Math.abs(u) : u; };
@@ -133,9 +140,11 @@ export default {
     const gO = group('Oszilloskop');
     const segV = segmented({ value: 1, options: [{ value: 0.5, label: '0,5 V/Div' }, { value: 1, label: '1 V' }, { value: 2, label: '2 V' }, { value: 5, label: '5 V' }], onChange: v => { S.vdiv = v; } });
     const segT = segmented({ value: 0.1, options: [{ value: 0.02, label: '20 ms/Div' }, { value: 0.05, label: '50 ms' }, { value: 0.1, label: '100 ms' }, { value: 0.2, label: '200 ms' }], onChange: v => { S.tdiv = v; } });
-    const dU = display('Û (Messfunktion)'), dT = display('Periodendauer T');
-    gO.append(el('div', { class: 'ctl' }, el('div', { style: 'grid-column:1/-1' }, segV)), el('div', { class: 'ctl' }, el('div', { style: 'grid-column:1/-1' }, segT)), dU, dT,
-      el('div', { class: 'bar' }, button('Messwert übernehmen', () => take(), 'btn small primary')));
+    const dU = display('ΔU zwischen den Cursorn'), dT = display('Δt zwischen den Cursorn');
+    const bFrz = button('Bild anhalten', () => { S.frozen = !S.frozen; if (S.frozen) S.snap = { buf: S.buf.slice(), t: S.t }; bFrz.textContent = S.frozen ? 'Bild weiterlaufen lassen' : 'Bild anhalten'; });
+    gO.append(el('div', { class: 'ctl' }, el('div', { style: 'grid-column:1/-1' }, segV)), el('div', { class: 'ctl' }, el('div', { style: 'grid-column:1/-1' }, segT)), el('div', { class: 'bar' }, bFrz), dU, dT,
+      el('div', { class: 'bar' }, button('Messwert übernehmen', () => take(), 'btn small primary')),
+      el('p', { class: 'muted', style: 'font-size:12.5px;margin:8px 0 0' }, 'Im 2D-Aufbau: Bild anhalten, die gelben Cursor auf Maximum und Minimum ziehen (ΔU = 2·Û), die blauen auf zwei gleiche Stellen einer Periode (Δt = T).'));
     controls.append(gA, gS, gO);
 
     const rows = [];
@@ -167,11 +176,14 @@ export default {
       chN.set([{ color: '#ab93ff', mode: 'dot', points: pn }], fn); resN.innerHTML = t2;
     }
     redraw();
-    const measU = () => Uhat() * (1 + gauss(0.008));
+    const cursorDU = () => Math.abs(S.cu.u1 - S.cu.u2), cursorDT = () => Math.abs(S.cu.t1 - S.cu.t2) * S.tdiv * 10;
     function take() {
       if (!S.run || S.f < 0.2) { toast('Der Motor steht.'); return; }
-      const U = measU(), T = 1 / S.f * (1 + gauss(0.003));
-      rows.push({ N: S.N, f: S.f, T, U, k: U / (S.N * omega()) }); redraw(); toast(`Übernommen: Û = ${fmt(U, 2)} V bei f = ${fmt(S.f, 1)} Hz`);
+      if (S.comm) { toast('Für die Messreihe auf Schleifringe umschalten.'); return; }
+      const dUc = cursorDU(), T = cursorDT();
+      if (dUc < 0.02 || T < 0.005) { toast('Erst die Cursor setzen: gelb auf Maximum und Minimum, blau auf eine Periode.'); return; }
+      const U = dUc / 2;
+      rows.push({ N: S.N, f: S.f, T, U, k: U / (S.N * omega()) }); redraw(); toast(`Übernommen: Û = ΔU/2 = ${fmt(U, 2)} V, T = ${fmt(T * 1000, 0)} ms bei f = ${fmt(S.f, 1)} Hz`);
     }
 
     // ======================= Ansicht 2D =======================
@@ -181,6 +193,11 @@ export default {
       { let h = ''; for (let i = 1; i < 10; i++) h += `<line x1="${556 + i * 30}" y1="60" x2="${556 + i * 30}" y2="300"/>`; for (let i = 1; i < 8; i++) h += `<line x1="556" y1="${60 + i * 30}" x2="856" y2="${60 + i * 30}"/>`; h += '<line x1="556" y1="180" x2="856" y2="180" stroke="#2a5a46"/>'; q('gGrid').innerHTML = h; }
       { let h = ''; for (let y = 140; y <= 320; y += 22) h += `<path d="M170 ${y} H392" marker-end="url(#gArr)"/>`; q('gField').innerHTML = h; }
       const CX = 280, CY = 230, RC = 92;
+      let drag = null;
+      svg.querySelectorAll('#gCur [data-c]').forEach(h => h.addEventListener('pointerdown', e => { drag = h.dataset.c; svg.setPointerCapture(e.pointerId); e.preventDefault(); }));
+      svg.addEventListener('pointermove', e => { if (!drag) return; const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; const c = p.matrixTransform(svg.getScreenCTM().inverse());
+        if (drag[0] === 'u') S.cu[drag] = Math.round(Math.max(-4, Math.min(4, (180 - c.y) / 30)) * S.vdiv * 100) / 100; else S.cu[drag] = Math.max(0, Math.min(1, (c.x - 556) / 300)); });
+      svg.addEventListener('pointerup', () => { drag = null; });
       let raf = 0;
       function frame() {
         raf = requestAnimationFrame(frame);
@@ -206,12 +223,17 @@ export default {
         }
         q('gPhiT').textContent = model ? `Φ = B·A·cos φ = ${fmt(B * AREA * c * 1e3, 3)} mWb   U = ${fmt(Uof(phi) * (S.run ? 1 : 0), 2)} V` : '';
         // Oszilloskop: Fenster von 10 Div, rechts = jetzt
-        const win = S.tdiv * 10, tNow = S.t, X = t => 856 - (tNow - t) / win * 300, Yv = v => 180 - Math.max(-125, Math.min(125, v / S.vdiv * 30));
-        let d = '', dp = ''; for (const [t, v, ph2] of S.buf) { if (tNow - t > win) continue; const x = X(t).toFixed(1); d += `${d ? 'L' : 'M'}${x} ${Yv(v).toFixed(1)}`; if (model) dp += `${dp ? 'L' : 'M'}${x} ${(180 - Math.cos(ph2) * 90).toFixed(1)}`; }
+        const src = S.frozen && S.snap ? S.snap : { buf: S.buf, t: S.t };
+        const win = S.tdiv * 10, tNow = src.t, X = t => 856 - (tNow - t) / win * 300, Yv = v => 180 - Math.max(-125, Math.min(125, v / S.vdiv * 30));
+        let d = '', dp = ''; for (const [t, v, ph2] of src.buf) { if (tNow - t > win) continue; const x = X(t).toFixed(1); d += `${d ? 'L' : 'M'}${x} ${Yv(v).toFixed(1)}`; if (model) dp += `${dp ? 'L' : 'M'}${x} ${(180 - Math.cos(ph2) * 90).toFixed(1)}`; }
         q('gTr').setAttribute('d', d); q('gPhiTr').setAttribute('d', dp); q('gPhiTr').setAttribute('opacity', model ? 0.9 : 0); q('gLeg2').setAttribute('opacity', model ? 1 : 0);
-        const last = S.buf[S.buf.length - 1]; if (last) { q('gDot').setAttribute('cx', 856); q('gDot').setAttribute('cy', Yv(last[1])); }
+        const last = S.buf[S.buf.length - 1]; if (last) { q('gDot').setAttribute('cx', 856); q('gDot').setAttribute('cy', Yv(last[1])); } q('gDot').setAttribute('opacity', S.frozen ? 0 : 1);
+        const yu = u => (180 - u / S.vdiv * 30).toFixed(1), xt = f => (556 + f * 300).toFixed(1);
+        for (const id of ['gCu1', 'gCu1h']) { q(id).setAttribute('y1', yu(S.cu.u1)); q(id).setAttribute('y2', yu(S.cu.u1)); } for (const id of ['gCu2', 'gCu2h']) { q(id).setAttribute('y1', yu(S.cu.u2)); q(id).setAttribute('y2', yu(S.cu.u2)); }
+        for (const id of ['gCt1', 'gCt1h']) { q(id).setAttribute('x1', xt(S.cu.t1)); q(id).setAttribute('x2', xt(S.cu.t1)); } for (const id of ['gCt2', 'gCt2h']) { q(id).setAttribute('x1', xt(S.cu.t2)); q(id).setAttribute('x2', xt(S.cu.t2)); }
+        q('gFrz').textContent = S.frozen ? 'angehalten' : '';
         q('gScopeT').textContent = `${fmt(S.vdiv, 1)} V/Div   ${fmt(S.tdiv * 1000, 0)} ms/Div`;
-        q('gUhat').textContent = S.run ? `Û = ${fmt(Uhat(), 2)} V` : 'Û = –'; q('gTT').textContent = S.run ? `T = ${fmt(1000 / S.f, 0)} ms` : 'T = –';
+        q('gUhat').textContent = `ΔU = ${fmt(cursorDU(), 2)} V`; q('gTT').textContent = `Δt = ${fmt(cursorDT() * 1000, 0)} ms`;
         // Lampe
         const P = S.lamp && S.run ? (Uhat() / Rtot()) ** 2 * R_LAMP / 2 : 0;
         q('gLampGl').setAttribute('opacity', Math.min(1, P / 0.9 * (0.6 + 0.4 * Math.abs(Math.sin(phi)))).toFixed(2));
@@ -306,7 +328,7 @@ export default {
       const n = 6;
       for (let i = 0; i < n; i++) { if (S.run) S.phi += omega() * dt / n; S.t += dt / n; S.buf.push([S.t, S.run ? Uof(S.phi) : 0, S.phi]); }
       while (S.buf.length && S.t - S.buf[0][0] > 2.2) S.buf.shift();
-      slow += dt; if (slow > 0.2) { slow = 0; dU.set(S.run ? `${fmt(measU(), 2)} V` : '–'); dT.set(S.run ? `${fmt(1000 / S.f, 0)} ms` : '–'); }
+      slow += dt; if (slow > 0.2) { slow = 0; dU.set(`${fmt(cursorDU(), 2)} V`); dT.set(`${fmt(cursorDT() * 1000, 0)} ms`); }
     }
     raf = requestAnimationFrame(loop);
     return { destroy() { cancelAnimationFrame(raf); host.destroy(); chF.destroy(); chN.destroy(); } };

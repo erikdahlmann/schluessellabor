@@ -212,11 +212,11 @@ export default {
       S.gas = GASES[id]; const g = S.gas;
       sU.input.max = g.Umax; sU.set(0, true); sG.input.max = g.UgMax; sG.set(g.Ug, true);
       gO.style.display = g.oven ? '' : 'none'; pen.length = 0; points.length = 0;
-      chK.o.xmax = g.Umax; redraw();
+      chK.o.xmax = g.Umax; mkS.input.max = g.Umax; redraw();
     }
 
     // ---- Messwerte ----
-    const curves = [], points = []; let shown = null;
+    const curves = [], points = []; let shown = null; const mk = { U: 5 };
     const figK = el('div', { class: 'fig' }), figM = el('div', { class: 'fig' });
     const chK = new Chart(figK, { xlabel: 'U_B in V', ylabel: 'I_A in nA', xmin: 0, xmax: 30 });
     const chM = new Chart(figM, { xlabel: 'Nummer n des Maximums', ylabel: 'U_max in V' });
@@ -224,9 +224,16 @@ export default {
     const tblMax = dataTable([{ key: 'n', label: 'n', digits: 0 }, { key: 'U', label: 'U_max in V', digits: 2 }, { key: 'dU', label: 'ΔU in V', fmt: v => v == null ? '–' : fmt(v, 2) }]);
     const tblRuns = dataTable([{ key: 'name', label: 'Kennlinie', fmt: v => v }, { key: 'nmax', label: 'Maxima', digits: 0 }, { key: 'dU', label: 'ΔU (Fit) in V', digits: 3 }, { key: 'lam', label: 'λ in nm', fmt: v => fmt(v, 0) }],
       { onDelete: i => { curves.splice(i, 1); shown = curves[curves.length - 1] || null; redraw(); } });
+    const mkS = slider({ label: 'Marker U_B', min: 0, max: 30, step: 0.05, value: mk.U, unit: 'V', digits: 2, onInput: v => { mk.U = v; mkD.set(`${fmt(markI(), 3)} nA`); redraw(); } });
+    const mkD = display('I_A am Marker');
+    const mkBox = el('div', { style: 'margin-top:10px' }, mkS, mkD, el('div', { class: 'bar' },
+      button('Maximum übernehmen', () => { if (!shown) { toast('Erst eine Kennlinie mit der Rampe aufnehmen.'); return; } if (shown.max.some(U => Math.abs(U - mk.U) < 1)) { toast('Hier ist schon ein Maximum gesetzt.'); return; } shown.max.push(mk.U); refit(shown); redraw(); toast(`Maximum bei U_B = ${fmt(mk.U, 2)} V gesetzt.`); }, 'btn small primary'),
+      button('Letztes löschen', () => { if (!shown?.max.length) return; shown.max.pop(); refit(shown); redraw(); }),
+      button('Mit automatischer Suche vergleichen', () => { if (!shown) return; toast(shown.auto.length ? 'Automatisch gefunden: ' + shown.auto.map(U => fmt(U, 2)).join(' · ') + ' V' : 'Die automatische Suche findet keine Maxima.', 6000); })),
+      el('p', { class: 'muted', style: 'font-size:12.5px;margin:6px 0 0' }, 'Marker langsam verschieben, bis I_A am größten ist. Dann übernehmen. So alle Maxima der Kurve setzen.'));
     messwerte.append(
       el('div', { class: 'data' },
-        el('div', { class: 'chartbox' }, el('h4', {}, 'Kennlinie I_A(U_B)'), figK,
+        el('div', { class: 'chartbox' }, el('h4', {}, 'Kennlinie I_A(U_B)'), figK, mkBox,
           csvTools(() => ({ meta: shown ? [`Franck-Hertz – ${shown.name}`] : [], columns: [{ key: 'U', label: 'U_B in V' }, { key: 'I', label: 'I_A in nA' }], rows: shown ? shown.pts.map(p => ({ U: p[0], I: p[1] })) : points.map(p => ({ U: p[0], I: p[1] })) }), 'franck-hertz_kennlinie')),
         el('div', { class: 'chartbox' }, el('h4', {}, 'Auswertung: Lage der Maxima'), figM, resM)),
       el('div', { style: 'height:14px' }),
@@ -247,22 +254,30 @@ export default {
       }
       return res;
     }
-    function analyse(c) {
-      c.max = findMax(c.pts, c.gas === 'ne' ? 10 : 3);
+    // Die Maxima setzen die Schülerinnen und Schüler selbst mit dem Marker; die automatische Suche dient nur zum Vergleich.
+    function analyse(c) { c.auto = findMax(c.pts, c.gas === 'ne' ? 10 : 3); c.max = []; refit(c); }
+    function refit(c) {
+      c.max.sort((a, b) => a - b);
       const l = c.max.length >= 2 ? fit.linFit(c.max.map((_, i) => i + 1), c.max) : null;
       c.dU = l ? l.a : NaN; c.lam = l ? 1239.84 / l.a : NaN; c.nmax = c.max.length; c.fit = l;
     }
+    const markI = () => { if (!shown) return NaN; const p = shown.pts; let best = null; for (const q of p) if (!best || Math.abs(q[0] - mk.U) < Math.abs(best[0] - mk.U)) best = q; return best ? best[1] : NaN; };
     function redraw() {
       const cols = ['#86dcff', '#f2ac74', '#ab93ff', '#7fd6a0', '#ff8a7a', '#e5d36b'];
       const series = curves.filter(c => c.gas === S.gas.id).map((c, i) => ({ name: c.name, color: cols[i % 6], points: c.pts }));
       if (points.length) series.push({ name: 'Einzelpunkte', color: '#ece6dc', mode: 'dot', points });
+      if (shown && shown.gas === S.gas.id) {
+        const ym = Math.max(0.5, ...shown.pts.map(q => q[1]));
+        series.push({ color: '#7fd6a0', points: [[mk.U, 0], [mk.U, ym * 1.05]], width: 1.2 });
+        if (shown.max.length) series.push({ name: 'gesetzte Maxima', color: '#ffd27a', mode: 'dot', points: shown.max.map(U => { let b = shown.pts[0]; for (const q of shown.pts) if (Math.abs(q[0] - U) < Math.abs(b[0] - U)) b = q; return [U, b[1]]; }) });
+      }
       chK.set(series); tblRuns.render(curves);
       if (shown && shown.max.length) {
         tblMax.render(shown.max.map((U, i) => ({ n: i + 1, U, dU: i ? U - shown.max[i - 1] : null })));
         chM.set([{ points: shown.max.map((U, i) => [i + 1, U]), color: '#f2ac74', mode: 'dot', name: 'Maxima' }], shown.fit ? [{ f: shown.fit.f, color: '#ab93ff', name: 'Ausgleichsgerade' }] : []);
         resM.innerHTML = shown.fit ? `<div><span>Steigung = Abstand ΔU</span><br><b>${fmt(shown.dU, 2)} V</b></div><div><span>Anregungsenergie</span><br><b>ΔE = ${fmt(shown.dU, 2)} eV</b></div><div><span>Wellenlänge des Lichts</span><br><b>λ = ${fmt(shown.lam, 0)} nm</b></div><div><span>Achsenabschnitt (≈ Kontaktspannung + U_G)</span><br><b>${fmt(shown.fit.b, 2)} V</b></div>`
           + (shown.gas === 'ne' ? '<div><span>Hinweis Neon</span><br><span>Das sichtbare rot-orange Licht stammt aus einem Folgeübergang (≈ 2 eV), nicht aus der Anregung selbst.</span></div>' : '')
-          : '<span>Mindestens zwei Maxima nötig.</span>';
+          : '<span>Mit dem Marker unter der Kennlinie mindestens zwei Maxima setzen.</span>';
       } else { tblMax.render([]); chM.set([]); resM.innerHTML = '<span>Noch keine Kennlinie. „Rampe starten“ zeichnet eine auf.</span>'; }
     }
     redraw();
@@ -278,7 +293,7 @@ export default {
     }
     function stopRamp(done) {
       const r = S.ramp; S.ramp = null; bRamp.textContent = 'Rampe starten'; gR.led(false);
-      if (r && r.pts.length > 40) { analyse(r); curves.push(r); shown = r; redraw(); toast(done ? `Kennlinie aufgenommen: ${r.nmax} Maxima gefunden.` : 'Rampe gestoppt, Teilkurve gespeichert.'); }
+      if (r && r.pts.length > 40) { analyse(r); curves.push(r); shown = r; redraw(); toast(done ? 'Kennlinie aufgenommen. Jetzt die Maxima mit dem Marker unter der Kennlinie bestimmen.' : 'Rampe gestoppt, Teilkurve gespeichert.', 4000); }
     }
     function takePoint() { const I = measureI(); points.push([+S.U.toFixed(1), +(I * 1e9).toFixed(3)]); pen.push([S.U, I]); redraw(); toast(`Punkt: U_B = ${fmt(S.U, 1)} V, I_A = ${fmt(I * 1e9, 2)} nA`); }
 
