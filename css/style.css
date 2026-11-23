@@ -244,8 +244,13 @@ table.tbl{width:100%;border-collapse:collapse;font-size:14px}
 .vbar .seg button{flex:none}
 @media (max-width:640px){.stage.ratio[data-view="2d"]{height:auto;aspect-ratio:1000/740}}
 /* LaTeX-Formeln (KaTeX) */
-.formula.tex{font:inherit;font-size:1.08rem;padding:6px 14px}
+.formula.tex{font:500 17px/1.6 var(--f-mono);padding:6px 14px}
 .formula.tex .katex-display{margin:.35em 0;text-align:left;overflow-x:auto;overflow-y:hidden}
 .formula.tex .katex-display>.katex{text-align:left}
-.prose .tex .katex{font-size:1.06em}
+.prose .tex .katex{font-size:1em}
+/* alte Schrift der Seite: Bloecke in Plex Mono, Fliesstext in Plex Sans; grosse Klammern und Operatoren bleiben KaTeX */
+.formula.tex .katex{font-size:1em}
+.tex .katex *:not(.delimsizing):not(.delim-size1):not(.delim-size4):not(.op-symbol){font-family:var(--f-body)}
+.formula.tex .katex *:not(.delimsizing):not(.delim-size1):not(.delim-size4):not(.op-symbol){font-family:var(--f-mono)}
+.tex .katex .mathnormal,.tex .katex .mathit{font-style:italic}
 .katex{color:var(--ink)}
