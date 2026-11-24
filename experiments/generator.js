@@ -7,9 +7,11 @@
 // ============================================================================
 import { viewHost } from '../js/lib/views.js';
 
-const B = 0.080 * (1 + (Math.random() * 0.06 - 0.03)), AREA = 0.05 * 0.04;   // T, m² (5 cm × 4 cm)
+const B_MAG = 0.080 * (1 + (Math.random() * 0.06 - 0.03)), AREA0 = 0.05 * 0.04;   // T, m² (5 cm × 4 cm)
+const K_HH = 0.69e-3, B_EARTH = 19.6e-6;                                       // Helmholtzspulen T/A, Horizontalkomponente Erdfeld
+const AREA_OF = n => n === 8000 ? 42e-4 : AREA0;
 const R_PER_TURN = 0.025, R_LAMP = 40;                                          // Ω je Windung, Ω Lampe
-const COILS = [200, 400, 800];
+const COILS = [200, 400, 800, 8000];
 
 const svgMarkup = () => `
 <svg viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans, system-ui, sans-serif" role="img" aria-label="Blick entlang der Drehachse: Spule zwischen Nord- und Südpol; rechts das Oszilloskop mit der induzierten Spannung">
@@ -23,11 +25,13 @@ const svgMarkup = () => `
 </defs>
 <rect width="1000" height="620" fill="url(#gBg)"/>
 <text x="40" y="34" fill="#8e979d" font-size="13">Blick entlang der Drehachse</text>
-<g filter="url(#gSh)">
+<g id="gPoles"><g filter="url(#gSh)">
   <rect x="50" y="110" width="100" height="240" rx="8" fill="#c4231b"/><rect x="410" y="110" width="100" height="240" rx="8" fill="#2f8a3c"/>
   <path d="M150 140 q20 90 0 180 h18 q14 -90 0 -180z" fill="#3a3f44"/><path d="M410 140 q-20 90 0 180 h-18 q-14 -90 0 -180z" fill="#3a3f44"/>
 </g>
-<text x="100" y="238" fill="#fff" font-size="30" font-weight="700" text-anchor="middle">N</text><text x="460" y="238" fill="#fff" font-size="30" font-weight="700" text-anchor="middle">S</text>
+<text x="100" y="238" fill="#fff" font-size="30" font-weight="700" text-anchor="middle">N</text><text x="460" y="238" fill="#fff" font-size="30" font-weight="700" text-anchor="middle">S</text></g>
+<g id="gHH" opacity="0"><rect x="120" y="96" width="34" height="268" rx="14" fill="url(#gCu)" filter="url(#gSh)"/><rect x="406" y="96" width="34" height="268" rx="14" fill="url(#gCu)" filter="url(#gSh)"/><text x="280" y="390" fill="#e6c9a8" font-size="12" text-anchor="middle">Helmholtzspulenpaar (Schnitt)</text></g>
+<g id="gEarth" opacity="0"><text x="280" y="100" fill="#86dcff" font-size="13" text-anchor="middle">Horizontalkomponente des Erdfelds → (nach Norden)</text></g>
 <g id="gField" opacity="0" stroke="#86dcff" stroke-width="1.2" fill="none"></g>
 <circle cx="280" cy="230" r="6" fill="#cfd4d8"/>
 <path id="gArc" fill="none" stroke="#ece6dc" stroke-width="1.2" opacity="0"/><text id="gArcT" fill="#ece6dc" font-size="12" font-family="IBM Plex Mono, monospace" opacity="0"></text>
@@ -41,6 +45,7 @@ const svgMarkup = () => `
   <text x="60" y="392" fill="#c7c1b7" font-size="12">⊙ / ⊗: Richtung des Induktionsstroms (technisch) in den beiden Leiterseiten</text>
   <text x="60" y="410" fill="#c7c1b7" font-size="12">Die Lorentzkraft auf die Elektronen wirkt entlang der Leiterseiten.</text>
 </g>
+<g id="gShadowG"><rect x="519" y="110" width="14" height="240" fill="#e8e4da"/><rect id="gShadow" x="519" width="14" fill="#3a3f44"/><text x="526" y="102" fill="#c9c3ba" font-size="10" text-anchor="middle">Schirm</text><text x="20" y="236" fill="#ffd27a" font-size="11">Lampe →</text></g>
 <text id="gPhiT" x="60" y="436" fill="#ece6dc" font-size="13" font-family="IBM Plex Mono, monospace"></text>
 
 <!-- Oszilloskop -->
@@ -62,7 +67,8 @@ const svgMarkup = () => `
 <text id="gUhat" x="872" y="108" fill="#222" font-size="12" font-family="IBM Plex Mono, monospace"></text>
 <text id="gTT" x="872" y="126" fill="#222" font-size="12" font-family="IBM Plex Mono, monospace"></text>
 <text id="gLeg1" x="872" y="160" fill="#1a7a4c" font-size="11" opacity="1">— U(t)</text>
-<text id="gLeg2" x="872" y="176" fill="#6a4bd0" font-size="11" opacity="0">— Φ(t)</text>
+<text id="gLeg2" x="872" y="176" fill="#6a4bd0" font-size="11" opacity="0">— A_s(t), Φ(t)</text>
+<text id="gSrc" x="60" y="470" fill="#c9c3ba" font-size="12"></text>
 <!-- Lampe und Antrieb -->
 <circle id="gLampGl" cx="640" cy="470" r="60" fill="url(#gLamp)" opacity="0"/>
 <circle cx="640" cy="470" r="20" fill="#e9e3d6" fill-opacity=".25" stroke="#c9c3ba"/><path d="M632 478 q8 -22 16 0" stroke="#8e5a2a" fill="none" stroke-width="1.6"/>
@@ -75,7 +81,7 @@ const svgMarkup = () => `
 </svg>`;
 
 export default {
-  intro: 'Eine Spule dreht sich gleichmäßig zwischen den Polen eines Magneten. Dabei ändert sich der magnetische Fluss durch die Spule ständig, und es wird eine sinusförmige Wechselspannung induziert. Ihr untersucht, wie der Scheitelwert von Drehfrequenz und Windungszahl abhängt.',
+  intro: 'Eine Spule dreht sich gleichmäßig in einem Magnetfeld (Dauermagnet, Helmholtzspulen oder Erdmagnetfeld). Dabei ändert sich der magnetische Fluss durch die Spule ständig, und es wird eine sinusförmige Wechselspannung induziert. Ihr untersucht, wie der Scheitelwert von Drehfrequenz und Windungszahl abhängt.',
   docs: {
     durchfuehrung: `
 <h3>Aufbau</h3>
@@ -87,6 +93,12 @@ export default {
 <li>Bild anhalten. Die gelben Cursor auf Maximum und Minimum ziehen (ΔU = 2·Û), die blauen auf zwei gleiche Stellen im Abstand einer Periode (Δt = T). <b>Messwert übernehmen.</b> Für f = 1 … 10 Hz und mit anderen Spulen wiederholen.</li>
 <li>Lampe zuschalten. Die Antriebsleistung beobachten.</li>
 <li>Auf Kommutator umschalten und den Verlauf der Spannung vergleichen.</li>
+</ol>
+<h3>Variante aus dem Handbuch: Helmholtzspulen und Schattenbild</h3>
+<ol>
+<li>Feld „Helmholtzspulen“ und die Induktionsspule mit 8000 Windungen (A = 42 cm²) wählen. Û für mehrere Spulenströme messen: Û ~ B.</li>
+<li>Die Lampe einschalten. Sie leuchtet in Feldrichtung und wirft den Schatten der Spule auf einen Schirm. Die Schattenbreite ist die wirksame Fläche A_s = A·cos α. Vergleicht Schatten und Spannung: Wo ist U am größten?</li>
+<li><b>Erdinduktor:</b> Feld „Erdmagnetfeld“, Messverstärker ×10. Aus Û, n, A und ω die Horizontalkomponente des Erdfelds bestimmen.</li>
 </ol>`,
     theorie: `
 <h3>Magnetischer Fluss</h3>
@@ -97,16 +109,24 @@ export default {
 <p>Die Spannung ist am größten, wenn der Fluss gerade null ist und sich am schnellsten ändert: Die Spulenfläche liegt dann parallel zu den Feldlinien. Ist der Fluss maximal, ist die Spannung null. Û wächst proportional mit f und mit N.</p>
 <h3>Erklärung mit der Lorentzkraft</h3>
 <p>Die beiden Leiterseiten bewegen sich auf einer Kreisbahn durch das Feld. Auf die Elektronen in ihnen wirkt die Lorentzkraft F = e·v·B entlang des Drahtes. Wirksam ist nur der Anteil von v senkrecht zu B, und der ändert sich mit sin(ω t).</p>
+<h3>Wirksame Fläche</h3>
+<p>Die Feldlinien durchsetzen nur die Projektion der Spulenfläche senkrecht zu B. Eine Lampe in Feldrichtung zeigt sie als Schatten:</p>
+<span class="formula tex">A_s = A \\cos(\\omega t) \\qquad U = -n\\, B\\, \\dot{A}_s = n\\, B\\, A\\, \\omega \\sin(\\omega t)</span>
+<p>Die Spannung ist am größten, wenn der Schatten am schmalsten ist, denn dort ändert sich seine Breite am schnellsten.</p>
+<h3>Erdinduktor</h3>
+<p>Dreht sich die Spule um eine senkrechte Achse, trägt nur die Horizontalkomponente B_H des Erdfelds bei (in Deutschland etwa 20 µT). Mit n = 8000, A = 42 cm² und f = 5 Hz ergibt sich Û ≈ 21 mV, deshalb der Messverstärker.</p>
 <h3>Lenz und Energie</h3>
 <p>Ist eine Lampe angeschlossen, fließt Strom. Die Kraft auf die stromdurchflossenen Leiterseiten bremst die Drehung. Der Antrieb muss die elektrische Leistung zusätzlich aufbringen (Energieerhaltung).</p>
 <h3>Kommutator</h3>
 <p>Der Kommutator vertauscht nach jeder halben Umdrehung die Anschlüsse. Dann klappt jede zweite Halbwelle nach oben: Es entsteht eine pulsierende Gleichspannung.</p>
 <h3>Modellgrenzen</h3>
-<ul><li>Das Feld zwischen den Polen ist als homogen angenommen (B ≈ 0,08 T, je Aufbau ±3 %).</li><li>Der Motor hält die Drehfrequenz exakt konstant. Reibung und Selbstinduktion sind vernachlässigt.</li></ul>
+<ul><li>Das Feld zwischen den Polen ist als homogen angenommen (B ≈ 0,08 T, je Aufbau ±3 %). Helmholtzspulen: B = 0,69 mT je Ampere. Erdfeld: B_H = 19,6 µT.</li><li>Der Motor hält die Drehfrequenz exakt konstant. Reibung und Selbstinduktion sind vernachlässigt.</li></ul>
 <h3>Was die Modellansicht zeigt</h3><ul><li><b>Feldlinien</b> von N nach S und die <b>Flächennormale n</b> mit dem Winkel zu B.</li><li>Die Geschwindigkeit der beiden Leiterseiten (orange) und die Richtung des induzierten Stroms (⊙ heraus, ⊗ hinein).</li><li>Im Oszilloskop zusätzlich der Fluss Φ(t). Die Spannung ist um eine Viertelperiode verschoben: Sie ist groß, wo Φ steil ist.</li><li>Im 3D-Aufbau laufen die Elektronen durch die Spule, schneller bei großer Spannung.</li></ul>`,
     geraet: `
 <table class="spec"><tbody>
-<tr><td>Spulen</td><td>200 · 400 · 800 Windungen, 5 cm × 4 cm, R ≈ 0,025 Ω je Windung</td></tr>
+<tr><td>Spulen</td><td>200 · 400 · 800 Windungen, 5 cm × 4 cm, R ≈ 0,025 Ω je Windung; Induktionsspule 8000 Windungen, A = 42 cm²</td></tr>
+<tr><td>Feld</td><td>Dauermagnet (0,08 T), Helmholtzspulenpaar 0 … 5 A (0,69 mT/A), Erdmagnetfeld (B_H ≈ 20 µT)</td></tr>
+<tr><td>Zubehör</td><td>Messverstärker ×10, Lampe in Feldrichtung mit Schirm</td></tr>
 <tr><td>Magnet</td><td>zwei Pole mit Polschuhen, B ≈ 0,08 T</td></tr>
 <tr><td>Antrieb</td><td>Motor mit Riemen, 0 … 10 Hz</td></tr>
 <tr><td>Abgriff</td><td>Schleifringe oder Kommutator, Kohlebürsten</td></tr>
@@ -115,42 +135,51 @@ export default {
     abi: `
 <details class="q"><summary>Begründe, in welcher Stellung der Spule die Spannung maximal ist. <span class="op">AFB II</span></summary><p>Wenn die Spulenfläche parallel zu den Feldlinien liegt. Dann ist Φ = 0, ändert sich aber am schnellsten. Gleichbedeutend: Die Leiterseiten bewegen sich senkrecht zu B, die Lorentzkraft auf die Elektronen ist am größten.</p></details>
 <details class="q"><summary>N = 400, A = 20 cm², f = 5 Hz, Û = 2,0 V. Berechne B. <span class="op">AFB II</span></summary><p>B = Û / (N·A·2πf) = 2,0 V / (400 · 0,0020 m² · 31,4 s⁻¹) ≈ 0,080 T.</p></details>
+<details class="q"><summary>Eine Spule (n = 8000, A = 42 cm²) dreht sich mit 5 Hz im Erdfeld. Nach dem Verstärker (×10) misst man Û = 0,21 V. Berechne B_H. <span class="op">AFB II</span></summary><p>Û am Spulenende 21 mV. B_H = Û/(n·A·2πf) = 0,021 V / (8000 · 0,0042 m² · 31,4 s⁻¹) ≈ 20 µT.</p></details>
 <details class="q"><summary>Wie ändert sich U(t), wenn die Drehfrequenz verdoppelt wird? <span class="op">AFB I</span></summary><p>Der Scheitelwert verdoppelt sich, die Periodendauer halbiert sich.</p></details>
 <details class="q"><summary>Erkläre, warum sich der Generator mit angeschlossener Lampe schwerer drehen lässt. <span class="op">AFB III</span></summary><p>Der Induktionsstrom fließt durch die Leiterseiten im Magnetfeld. Auf sie wirkt eine Kraft, die nach der Lenzschen Regel die Drehung hemmt. Die mechanische Arbeit gegen diese Kraft wird in der Lampe zu Licht und Wärme.</p></details>`
   },
 
   async mount({ stage, controls, messwerte, ui, Chart, csvTools, fit }) {
     const { el, group, slider, segmented, check, button, fmt, dataTable, toast, display, gauss } = ui;
-    const S = { frozen: false, snap: null, cu: { u1: 1, u2: -1, t1: 0.15, t2: 0.65 }, f: 2, N: 400, run: true, comm: false, lamp: false, phi: 0.3, vdiv: 1, tdiv: 0.1, buf: [], t: 0 };
+    const S = { field: 'mag', Ihh: 3, gain: 1, lamp2: false, frozen: false, snap: null, cu: { u1: 1, u2: -1, t1: 0.15, t2: 0.65 }, f: 2, N: 400, run: true, comm: false, lamp: false, phi: 0.3, vdiv: 1, tdiv: 0.1, buf: [], t: 0 };
     const omega = () => 2 * Math.PI * S.f;
-    const Uhat = () => S.N * B * AREA * omega();
+    const Bnow = () => S.field === 'mag' ? B_MAG : S.field === 'hh' ? K_HH * S.Ihh : B_EARTH;
+    const AREA = () => AREA_OF(S.N);
+    const Uhat = () => S.N * Bnow() * AREA() * omega() * S.gain;
     const Uof = phi => { const u = Uhat() * Math.sin(phi); return S.comm ? Math.abs(u) : u; };
-    const Rtot = () => S.N * R_PER_TURN + R_LAMP;
-    const Iof = phi => S.lamp ? Uof(phi) / Rtot() : 0;
+    const Rtot = () => (S.N === 8000 ? 400 : S.N * R_PER_TURN) + R_LAMP;
+    const Iof = phi => S.lamp ? Uof(phi) / S.gain / Rtot() : 0;
 
     const gA = group('Antrieb', { led: true }); gA.led(true);
     const cRun = check({ label: 'Motor läuft', checked: true, onChange: v => { S.run = v; gA.led(v); } });
     const sF = slider({ label: 'Drehfrequenz f', min: 0.2, max: 10, step: 0.1, value: S.f, unit: 'Hz', digits: 1, onInput: v => { S.f = v; } });
     gA.append(cRun, sF);
+    const gF = group('Magnetfeld');
+    const segF = segmented({ value: 'mag', options: [{ value: 'mag', label: 'Dauermagnet' }, { value: 'hh', label: 'Helmholtzspulen' }, { value: 'earth', label: 'Erdmagnetfeld' }], onChange: v => { S.field = v; sIhh.hidden = v !== 'hh'; } });
+    const sIhh = slider({ label: 'Strom in den Helmholtzspulen', min: 0, max: 5, step: 0.1, value: S.Ihh, unit: 'A', digits: 1, onInput: v => { S.Ihh = v; } }); sIhh.hidden = true;
+    const cG = check({ label: 'Messverstärker ×10', checked: false, onChange: v => { S.gain = v ? 10 : 1; } });
+    const cLa = check({ label: 'Lampe in Feldrichtung (Schattenbild)', checked: false, onChange: v => { S.lamp2 = v; } });
+    gF.append(el('div', { class: 'ctl' }, el('div', { style: 'grid-column:1/-1' }, segF)), sIhh, cG, cLa);
     const gS = group('Spule und Abgriff');
-    const segN = segmented({ value: 400, options: COILS.map(n => ({ value: n, label: `${n} Wdg.` })), onChange: v => { S.N = v; } });
+    const segN = segmented({ value: 400, options: COILS.map(n => ({ value: n, label: n === 8000 ? '8000 (42 cm²)' : `${n} Wdg.` })), onChange: v => { S.N = v; } });
     const segC = segmented({ value: 'ring', options: [{ value: 'ring', label: 'Schleifringe' }, { value: 'comm', label: 'Kommutator' }], onChange: v => { S.comm = v === 'comm'; } });
     const cL = check({ label: 'Lampe anschließen', checked: false, onChange: v => { S.lamp = v; } });
     gS.append(el('div', { class: 'ctl' }, el('label', { style: 'grid-column:1/-1' }, 'Windungszahl N'), el('div', { style: 'grid-column:1/-1' }, segN)), el('div', { class: 'ctl' }, el('div', { style: 'grid-column:1/-1' }, segC)), cL);
     const gO = group('Oszilloskop');
-    const segV = segmented({ value: 1, options: [{ value: 0.5, label: '0,5 V/Div' }, { value: 1, label: '1 V' }, { value: 2, label: '2 V' }, { value: 5, label: '5 V' }], onChange: v => { S.vdiv = v; } });
+    const segV = segmented({ value: 1, options: [{ value: 0.01, label: '10 mV/Div' }, { value: 0.05, label: '50 mV' }, { value: 0.2, label: '0,2 V' }, { value: 0.5, label: '0,5 V' }, { value: 1, label: '1 V' }, { value: 2, label: '2 V' }, { value: 5, label: '5 V' }], onChange: v => { S.vdiv = v; } });
     const segT = segmented({ value: 0.1, options: [{ value: 0.02, label: '20 ms/Div' }, { value: 0.05, label: '50 ms' }, { value: 0.1, label: '100 ms' }, { value: 0.2, label: '200 ms' }], onChange: v => { S.tdiv = v; } });
     const dU = display('ΔU zwischen den Cursorn'), dT = display('Δt zwischen den Cursorn');
     const bFrz = button('Bild anhalten', () => { S.frozen = !S.frozen; if (S.frozen) S.snap = { buf: S.buf.slice(), t: S.t }; bFrz.textContent = S.frozen ? 'Bild weiterlaufen lassen' : 'Bild anhalten'; });
     gO.append(el('div', { class: 'ctl' }, el('div', { style: 'grid-column:1/-1' }, segV)), el('div', { class: 'ctl' }, el('div', { style: 'grid-column:1/-1' }, segT)), el('div', { class: 'bar' }, bFrz), dU, dT,
       el('div', { class: 'bar' }, button('Messwert übernehmen', () => take(), 'btn small primary')),
       el('p', { class: 'muted', style: 'font-size:12.5px;margin:8px 0 0' }, 'Im 2D-Aufbau: Bild anhalten, die gelben Cursor auf Maximum und Minimum ziehen (ΔU = 2·Û), die blauen auf zwei gleiche Stellen einer Periode (Δt = T).'));
-    controls.append(gA, gS, gO);
+    controls.append(gA, gF, gS, gO);
 
     const rows = [];
     const tbl = dataTable([
-      { key: 'N', label: 'N', digits: 0 }, { key: 'f', label: 'f in Hz', digits: 1 }, { key: 'T', label: 'T in ms', fmt: v => fmt(v * 1000, 0) },
-      { key: 'U', label: 'Û in V', digits: 2 }, { key: 'k', label: 'Û/(N·ω) in mV·s', fmt: v => fmt(v * 1000, 3) }
+      { key: 'src', label: 'Feld', fmt: v => v }, { key: 'N', label: 'N', digits: 0 }, { key: 'f', label: 'f in Hz', digits: 1 }, { key: 'T', label: 'T in ms', fmt: v => fmt(v * 1000, 0) },
+      { key: 'U', label: 'Û in V (Spule)', fmt: v => fmt(v, v < 0.1 ? 4 : 2) }, { key: 'Bm', label: 'B = Û/(N·A·ω)', fmt: v => v < 1e-3 ? fmt(v * 1e6, 1) + ' µT' : fmt(v * 1e3, 2) + ' mT' }
     ], { onDelete: i => { rows.splice(i, 1); redraw(); } });
     const figF = el('div', { class: 'fig' }), figN = el('div', { class: 'fig' });
     const chF = new Chart(figF, { xlabel: 'f in Hz', ylabel: 'Û in V' }), chN = new Chart(figN, { xlabel: 'N', ylabel: 'Û/f in V·s' });
@@ -158,21 +187,22 @@ export default {
     messwerte.append(
       el('div', { class: 'data' },
         el('div', { class: 'chartbox' }, el('h4', {}, 'Û über f (je Spule)'), figF, resF,
-          csvTools(() => ({ meta: ['Generator', `A = ${AREA} m^2`], columns: [{ key: 'N', label: 'N' }, { key: 'f', label: 'f in Hz' }, { key: 'T', label: 'T in s' }, { key: 'U', label: 'U_hat in V' }], rows }), 'generator_messreihe')),
+          csvTools(() => ({ meta: ['Generator', 'A = 20 cm^2 (200/400/800 Wdg.), 42 cm^2 (8000 Wdg.)'], columns: [{ key: 'src', label: 'Feld' }, { key: 'N', label: 'N' }, { key: 'f', label: 'f in Hz' }, { key: 'T', label: 'T in s' }, { key: 'U', label: 'U_hat in V' }], rows }), 'generator_messreihe')),
         el('div', { class: 'chartbox' }, el('h4', {}, 'Û/f über N'), figN, resN)),
       el('div', { style: 'height:14px' }), tbl);
     const cols = { 200: '#86dcff', 400: '#f2ac74', 800: '#7fd6a0' };
+    const srcName = () => ({ mag: 'Dauermagnet', hh: `Helmholtz ${fmt(S.Ihh, 1)} A`, earth: 'Erdfeld' })[S.field];
     function redraw() {
       tbl.render(rows);
       const series = [], fits = []; let txt = '';
       for (const n of COILS) {
-        const pts = rows.filter(r => r.N === n).map(r => [r.f, r.U]); if (!pts.length) continue;
+        const pts = rows.filter(r => r.N === n && r.src === srcName()).map(r => [r.f, r.U]); if (!pts.length) continue;
         series.push({ name: `N = ${n}`, color: cols[n], mode: 'dot', points: pts });
-        if (pts.length >= 2) { const f = fit.propFit(pts.map(p => p[0]), pts.map(p => p[1])); if (f) { fits.push({ f: f.f, color: cols[n] }); txt += `<div><span>N = ${n}: Steigung ${fmt(f.a, 3)} V/Hz</span><br><b>B = ${fmt(f.a / (n * AREA * 2 * Math.PI), 3)} T</b> <span>· R² = ${fmt(f.r2, 4)}</span></div>`; } }
+        if (pts.length >= 2) { const f = fit.propFit(pts.map(p => p[0]), pts.map(p => p[1])); if (f) { fits.push({ f: f.f, color: cols[n] }); const Bf = f.a / (n * AREA_OF(n) * 2 * Math.PI); txt += `<div><span>${srcName()}, N = ${n}: Steigung ${fmt(f.a, 4)} V/Hz</span><br><b>B = ${Bf < 1e-3 ? fmt(Bf * 1e6, 1) + ' µT' : fmt(Bf * 1000, 2) + ' mT'}</b> <span>· R² = ${fmt(f.r2, 4)}</span></div>`; } }
       }
       chF.set(series, fits); resF.innerHTML = txt || '<span>Mindestens zwei Drehfrequenzen je Spule messen.</span>';
-      const pn = rows.filter(r => r.f > 0.1).map(r => [r.N, r.U / r.f]); let t2 = '<span>Messungen mit mehreren Spulen ergänzen.</span>'; const fn = [];
-      if (new Set(rows.map(r => r.N)).size >= 2) { const f = fit.propFit(pn.map(p => p[0]), pn.map(p => p[1])); if (f) { fn.push({ f: f.f, color: '#ab93ff' }); t2 = `<div><span>Steigung = 2π·A·B</span><br><b>B = ${fmt(f.a / (2 * Math.PI * AREA), 3)} T</b></div>`; } }
+      const pn = rows.filter(r => r.f > 0.1 && r.src === srcName() && r.N !== 8000).map(r => [r.N, r.U / r.f]); let t2 = '<span>Messungen mit mehreren Spulen ergänzen.</span>'; const fn = [];
+      if (new Set(rows.map(r => r.N)).size >= 2) { const f = fit.propFit(pn.map(p => p[0]), pn.map(p => p[1])); if (f) { fn.push({ f: f.f, color: '#ab93ff' }); t2 = `<div><span>Steigung = 2π·A·B</span><br><b>B = ${fmt(f.a / (2 * Math.PI * AREA0), 3)} T</b></div>`; } }
       chN.set([{ color: '#ab93ff', mode: 'dot', points: pn }], fn); resN.innerHTML = t2;
     }
     redraw();
@@ -182,8 +212,8 @@ export default {
       if (S.comm) { toast('Für die Messreihe auf Schleifringe umschalten.'); return; }
       const dUc = cursorDU(), T = cursorDT();
       if (dUc < 0.02 || T < 0.005) { toast('Erst die Cursor setzen: gelb auf Maximum und Minimum, blau auf eine Periode.'); return; }
-      const U = dUc / 2;
-      rows.push({ N: S.N, f: S.f, T, U, k: U / (S.N * omega()) }); redraw(); toast(`Übernommen: Û = ΔU/2 = ${fmt(U, 2)} V, T = ${fmt(T * 1000, 0)} ms bei f = ${fmt(S.f, 1)} Hz`);
+      const U = dUc / 2 / S.gain;
+      rows.push({ src: srcName(), N: S.N, f: S.f, T, U, Bm: U / (S.N * AREA() * omega()) }); redraw(); toast(`Übernommen: Û = ΔU/2${S.gain > 1 ? '/10' : ''} = ${fmt(U, U < 0.1 ? 4 : 2)} V, T = ${fmt(T * 1000, 0)} ms bei f = ${fmt(S.f, 1)} Hz`);
     }
 
     // ======================= Ansicht 2D =======================
@@ -207,7 +237,7 @@ export default {
         q('gCoil').setAttribute('x1', p1[0]); q('gCoil').setAttribute('y1', p1[1]); q('gCoil').setAttribute('x2', p2[0]); q('gCoil').setAttribute('y2', p2[1]);
         q('gSide1').setAttribute('transform', `translate(${p1[0].toFixed(1)} ${p1[1].toFixed(1)})`); q('gSide2').setAttribute('transform', `translate(${p2[0].toFixed(1)} ${p2[1].toFixed(1)})`);
         const u = Uhat() * s * (S.run ? 1 : 0), dot = '<circle r="3.5"/>', cross = '<path d="M-6 -6 L6 6 M6 -6 L-6 6" fill="none"/>';
-        const showSym = model && Math.abs(u) > Uhat() * 0.08 && S.run;
+        const showSym = model && Math.abs(u) > Uhat() * 0.08 && S.run && Uhat() > 0;
         q('gSide1').querySelector('.sym').innerHTML = showSym ? (u > 0 ? dot : cross) : ''; q('gSide2').querySelector('.sym').innerHTML = showSym ? (u > 0 ? cross : dot) : '';
         q('gField').setAttribute('opacity', model ? 0.55 : 0); q('gModel2').setAttribute('opacity', model ? 1 : 0); q('gArc').setAttribute('opacity', model ? 1 : 0); q('gArcT').setAttribute('opacity', model ? 1 : 0);
         if (model) {
@@ -221,21 +251,24 @@ export default {
           q('gV2').setAttribute('x1', p2[0]); q('gV2').setAttribute('y1', p2[1]); q('gV2').setAttribute('x2', p2[0] + vL * c); q('gV2').setAttribute('y2', p2[1] - vL * s);
           q('gVt').setAttribute('x', p1[0] - vL * c - 14); q('gVt').setAttribute('y', p1[1] + vL * s);
         }
-        q('gPhiT').textContent = model ? `Φ = B·A·cos φ = ${fmt(B * AREA * c * 1e3, 3)} mWb   U = ${fmt(Uof(phi) * (S.run ? 1 : 0), 2)} V` : '';
+        q('gPhiT').textContent = model ? `Φ = B·A·cos φ = ${fmt(Bnow() * AREA() * c * 1e3, Bnow() < 1e-3 ? 6 : 3)} mWb   U = ${fmt(Uof(phi) / S.gain * (S.run ? 1 : 0), 4)} V` : '';
+        q('gPoles').setAttribute('opacity', S.field === 'mag' ? 1 : 0); q('gHH').setAttribute('opacity', S.field === 'hh' ? 1 : 0); q('gEarth').setAttribute('opacity', S.field === 'earth' ? 1 : 0);
+        q('gShadowG').setAttribute('opacity', S.lamp2 ? 1 : 0); { const hgt = 2 * RC * Math.abs(c); q('gShadow').setAttribute('y', CY - hgt / 2); q('gShadow').setAttribute('height', Math.max(1.5, hgt)); }
+        q('gSrc').textContent = `Feld: ${srcName()} · B = ${Bnow() < 1e-3 ? fmt(Bnow() * 1e6, 1) + ' µT' : fmt(Bnow() * 1000, 2) + ' mT'}${S.gain > 1 ? ' · Verstärker ×10' : ''}`;
         // Oszilloskop: Fenster von 10 Div, rechts = jetzt
         const src = S.frozen && S.snap ? S.snap : { buf: S.buf, t: S.t };
         const win = S.tdiv * 10, tNow = src.t, X = t => 856 - (tNow - t) / win * 300, Yv = v => 180 - Math.max(-125, Math.min(125, v / S.vdiv * 30));
-        let d = '', dp = ''; for (const [t, v, ph2] of src.buf) { if (tNow - t > win) continue; const x = X(t).toFixed(1); d += `${d ? 'L' : 'M'}${x} ${Yv(v).toFixed(1)}`; if (model) dp += `${dp ? 'L' : 'M'}${x} ${(180 - Math.cos(ph2) * 90).toFixed(1)}`; }
-        q('gTr').setAttribute('d', d); q('gPhiTr').setAttribute('d', dp); q('gPhiTr').setAttribute('opacity', model ? 0.9 : 0); q('gLeg2').setAttribute('opacity', model ? 1 : 0);
+        let d = '', dp = ''; for (const [t, v, ph2] of src.buf) { if (tNow - t > win) continue; const x = X(t).toFixed(1); d += `${d ? 'L' : 'M'}${x} ${Yv(v).toFixed(1)}`; if (model || S.lamp2) dp += `${dp ? 'L' : 'M'}${x} ${(180 - Math.cos(ph2) * 90).toFixed(1)}`; }
+        q('gTr').setAttribute('d', d); q('gPhiTr').setAttribute('d', dp); q('gPhiTr').setAttribute('opacity', model || S.lamp2 ? 0.9 : 0); q('gLeg2').setAttribute('opacity', model || S.lamp2 ? 1 : 0);
         const last = S.buf[S.buf.length - 1]; if (last) { q('gDot').setAttribute('cx', 856); q('gDot').setAttribute('cy', Yv(last[1])); } q('gDot').setAttribute('opacity', S.frozen ? 0 : 1);
         const yu = u => (180 - u / S.vdiv * 30).toFixed(1), xt = f => (556 + f * 300).toFixed(1);
         for (const id of ['gCu1', 'gCu1h']) { q(id).setAttribute('y1', yu(S.cu.u1)); q(id).setAttribute('y2', yu(S.cu.u1)); } for (const id of ['gCu2', 'gCu2h']) { q(id).setAttribute('y1', yu(S.cu.u2)); q(id).setAttribute('y2', yu(S.cu.u2)); }
         for (const id of ['gCt1', 'gCt1h']) { q(id).setAttribute('x1', xt(S.cu.t1)); q(id).setAttribute('x2', xt(S.cu.t1)); } for (const id of ['gCt2', 'gCt2h']) { q(id).setAttribute('x1', xt(S.cu.t2)); q(id).setAttribute('x2', xt(S.cu.t2)); }
         q('gFrz').textContent = S.frozen ? 'angehalten' : '';
-        q('gScopeT').textContent = `${fmt(S.vdiv, 1)} V/Div   ${fmt(S.tdiv * 1000, 0)} ms/Div`;
+        q('gScopeT').textContent = `${S.vdiv < 0.1 ? fmt(S.vdiv * 1000, 0) + ' mV' : fmt(S.vdiv, 1) + ' V'}/Div   ${fmt(S.tdiv * 1000, 0)} ms/Div`;
         q('gUhat').textContent = `ΔU = ${fmt(cursorDU(), 2)} V`; q('gTT').textContent = `Δt = ${fmt(cursorDT() * 1000, 0)} ms`;
         // Lampe
-        const P = S.lamp && S.run ? (Uhat() / Rtot()) ** 2 * R_LAMP / 2 : 0;
+        const P = S.lamp && S.run ? (Uhat() / S.gain / Rtot()) ** 2 * R_LAMP / 2 : 0;
         q('gLampGl').setAttribute('opacity', Math.min(1, P / 0.9 * (0.6 + 0.4 * Math.abs(Math.sin(phi)))).toFixed(2));
         q('gLampT').textContent = S.lamp ? `Lampe angeschlossen · P = ${fmt(P * 1000, 0)} mW` : 'Lampe (nicht angeschlossen)';
         q('gF').textContent = S.run ? `f = ${fmt(S.f, 1)} Hz` : 'Motor aus';
@@ -256,7 +289,9 @@ export default {
       const Y = 0.12, W = 0.05, Hh = 0.04;                              // Achshöhe, Spulenbreite (quer), Länge entlang der Achse
       const base = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.014, 0.3), new THREE.MeshStandardMaterial({ color: 0x9aa0a6, metalness: 0.7, roughness: 0.4 })); base.position.y = 0.007; base.receiveShadow = true; scene.add(base);
       const matR = new THREE.MeshStandardMaterial({ color: 0xc4231b, roughness: 0.45 }), matG = new THREE.MeshStandardMaterial({ color: 0x2f8a3c, roughness: 0.45 });
-      for (const [x, m] of [[-0.075, matR], [0.075, matG]]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.16, 0.08), m); b.position.set(x, 0.094, 0); b.castShadow = true; scene.add(b); }
+      const mags = [], hh = [];
+      for (const [x, m] of [[-0.075, matR], [0.075, matG]]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.16, 0.08), m); b.position.set(x, 0.094, 0); b.castShadow = true; scene.add(b); mags.push(b); }
+      for (const x of [-0.036, 0.036]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.006, 12, 48), M.copper); r.rotation.y = Math.PI / 2; r.position.set(x, 0.12, 0); r.castShadow = true; scene.add(r); hh.push(r); }
       const lN = label(THREE, 'N', { color: '#ffffff', size: 0.02 }); lN.position.set(-0.075, 0.2, 0.045); const lS = label(THREE, 'S', { color: '#ffffff', size: 0.02 }); lS.position.set(0.075, 0.2, 0.045); scene.add(lN, lS);
       // Achse entlang z, Lager, Schleifringe vorn, Riemenscheibe hinten
       const axle = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.26, 16), M.steel); axle.rotation.x = Math.PI / 2; axle.position.set(0, Y, 0.02); scene.add(axle);
@@ -295,8 +330,9 @@ export default {
       let acc = 0;
       const off = lab.onFrame((dt, t) => {
         const model = MM.model, phi = S.phi;
+        for (const m of mags) m.visible = S.field === 'mag'; for (const r of hh) r.visible = S.field === 'hh'; lN.visible = lS.visible = S.field === 'mag';
         rot.rotation.z = phi; commG.visible = S.comm;
-        const P = S.lamp && S.run ? (Uof(phi) / Rtot()) ** 2 * R_LAMP : 0;
+        const P = S.lamp && S.run ? (Uof(phi) / S.gain / Rtot()) ** 2 * R_LAMP : 0;
         bulb.material.color.setRGB(0.33 + Math.min(1.6, P * 2.2), 0.31 + Math.min(1.2, P * 1.6), 0.28 + Math.min(0.6, P * 0.7)); bulbLight.intensity = Math.min(0.4, P * 0.5);
         acc += dt;
         if (acc > 0.05) {

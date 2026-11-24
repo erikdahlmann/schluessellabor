@@ -4,12 +4,16 @@
 //  F = I·l·B (Leiter senkrecht zu B). Gleichgewicht: tan φ = F / (m·g).
 //  Bewegung: φ'' = (F·cos φ − m·g·sin φ)/(m·L) − γ·φ'
 //  Modell: Feld des Magneten, Feld des Leiters, Gesamtfeld, Kräfte, Elektronen.
+//  Modus Induktion (Handbuch-Grundversuch): Schaukel schwingt ohne Strom, U = l·v·B,
+//  µV-Verstärker ×10⁴, Messwerterfassung mit U(t) und v(t) (Ultraschallsensor).
 // ============================================================================
 import { viewHost } from '../js/lib/views.js';
 
 const G = 9.81, MASS = 0.015, LW = 0.20, L_PER = 0.030, IMAX = 6;    // kg, m (Drahtlänge), m je Magnet, A
 const B0 = 0.100 * (1 + (Math.random() * 0.08 - 0.04));               // T, je Aufbau etwas anders
-const GAMMA = 3.0;                                                    // Dämpfung in 1/s
+const GAMMA = 3.0;                                                    // Dämpfung in 1/s (Modus Kraft)
+const GAMMA_AIR = 0.09, R_LOOP = 0.05, GAIN = 1e4;                   // Luftdämpfung 1/s, Widerstand kurzgeschlossen Ω, Verstärkung
+const SHIFT_EDGE = 0.08;                                              // m: Magnet so verschoben, dass der Stab am Rand hängt
 // 2D-Maße (Seitenansicht in Richtung des Stabs)
 const PX = 1500, PIV = [320, 70], RODR = 10;
 const LEG = { x0: 200, x1: 470, top: [282, 316], bot: [424, 458] };
@@ -36,7 +40,7 @@ const svgMarkup = () => `
 <!-- Skala hinter dem Stab -->
 <g id="sScale" font-family="IBM Plex Mono, monospace" font-size="10" fill="#c9c3ba"></g>
 <!-- Magnet: Schenkel oben und unten, Joch rechts -->
-<g filter="url(#sSh)">
+<g id="sMagG"><g filter="url(#sSh)">
   <rect id="sLegT" x="${LEG.x0}" y="${LEG.top[0]}" width="${LEG.x1 - LEG.x0 + 40}" height="${LEG.top[1] - LEG.top[0]}" rx="4"/>
   <rect id="sLegB" x="${LEG.x0}" y="${LEG.bot[0]}" width="${LEG.x1 - LEG.x0 + 40}" height="${LEG.bot[1] - LEG.bot[0]}" rx="4"/>
   <rect x="${LEG.x1}" y="${LEG.top[0]}" width="40" height="${LEG.bot[1] - LEG.top[0]}" rx="6" fill="#3a3f44"/>
@@ -44,7 +48,7 @@ const svgMarkup = () => `
 <text id="sPT" x="${LEG.x0 + 14}" y="${LEG.top[0] + 25}" fill="#fff" font-size="18" font-weight="700"></text>
 <text id="sPB" x="${LEG.x0 + 14}" y="${LEG.bot[0] + 25}" fill="#fff" font-size="18" font-weight="700"></text>
 <rect x="${LEG.x0 - 10}" y="${LEG.bot[1]}" width="${LEG.x1 - LEG.x0 + 60}" height="96" fill="#5a4630" stroke="#3b2e20"/>
-<text x="${LEG.x0 + 4}" y="${LEG.bot[1] + 112}" fill="#8e979d" font-size="11" id="sMagT"></text>
+<text x="${LEG.x0 + 4}" y="${LEG.bot[1] + 112}" fill="#8e979d" font-size="11" id="sMagT"></text></g>
 <!-- Modell: Feldlinien und Kräfte -->
 <g id="sFieldG" opacity="0"><g id="sField" fill="none" stroke="#86dcff" stroke-width="1.2" opacity=".8"></g></g>
 <!-- Schaukel -->
@@ -62,6 +66,26 @@ const svgMarkup = () => `
   <text id="sFSt" fill="#c7b6ff" stroke="none" font-size="13" font-weight="600">F_Draht</text>
 </g>
 <text id="sPhi" fill="#ece6dc" font-size="12" font-family="IBM Plex Mono, monospace"></text>
+<line id="sV" stroke="#f2ac74" stroke-width="3" marker-end="url(#sArrF)" opacity="0"/><text id="sVt" fill="#f2ac74" font-size="13" font-weight="600" opacity="0">v</text>
+<g id="sSens"><rect x="40" y="250" width="34" height="26" rx="4" fill="#3a3f44"/><circle cx="74" cy="263" r="7" fill="#9aa0a6"/><text x="38" y="294" fill="#8e979d" font-size="10">Ultraschall</text></g>
+<!-- rechts: Messwerterfassung (Modus Induktion) -->
+<g id="sIndG" opacity="0">
+  <rect x="590" y="60" width="370" height="300" rx="10" fill="#c9cbc8" filter="url(#sSh)"/>
+  <text x="604" y="80" fill="#333" font-size="12">µV-Verstärker ×10 000 → Messwerterfassung</text>
+  <rect x="604" y="88" width="342" height="200" rx="5" fill="#081210"/>
+  <g id="sIGrid" stroke="#173328"></g>
+  <path id="sIV" fill="none" stroke="#86dcff" stroke-width="1.4" opacity=".7"/>
+  <path id="sIU" fill="none" stroke="#7dffb8" stroke-width="2" filter="url(#sGlow)"/>
+  <text id="sIT" x="606" y="304" fill="#333" font-size="11" font-family="IBM Plex Mono, monospace"></text>
+  <text id="sIU0" x="606" y="324" fill="#1a5a3a" font-size="15" font-family="IBM Plex Mono, monospace"></text>
+  <text id="sIR" x="944" y="324" fill="#b0261c" font-size="11" text-anchor="end"></text>
+  <text x="606" y="346" fill="#555" font-size="11">grün: U nach dem Verstärker · blau: v (Ultraschallsensor)</text>
+</g>
+<g id="sIndM" opacity="0">
+  <text id="sIM1" x="590" y="482" fill="#ece6dc" font-size="13" font-family="IBM Plex Mono, monospace"></text>
+  <text x="590" y="504" fill="#c7c1b7" font-size="12">Lorentzkraft auf die Elektronen im bewegten Stab:</text>
+  <text x="590" y="522" fill="#c7c1b7" font-size="12">Sie werden an ein Ende geschoben → Spannung U = l·v·B</text>
+</g>
 
 <!-- rechts: Netzgerät (Realansicht) -->
 <g id="sPsuG">
@@ -94,7 +118,7 @@ const svgMarkup = () => `
 </svg>`;
 
 export default {
-  intro: 'Ein Kupferstab hängt an zwei dünnen Drähten zwischen den Polen eines Hufeisenmagneten. Fließt Strom durch den Stab, schwingt die Schaukel zur Seite. Aus der Auslenkung bestimmt ihr die Kraft und zeigt: F wächst proportional mit der Stromstärke I und der Leiterlänge l im Feld.',
+  intro: 'Ein Kupferstab hängt an zwei dünnen Drähten zwischen den Polen eines Hufeisenmagneten. Im Modus <b>Induktion</b> (Grundversuch im Handbuch) schwingt die Schaukel ohne Strom durch das Feld, und an den Drahtenden entsteht eine Spannung U = l·v·B. Im Modus <b>Kraft</b> fließt Strom durch den Stab, und die Schaukel wird zur Seite gedrückt: F = I·l·B.',
   docs: {
     durchfuehrung: `
 <h3>Aufbau</h3>
@@ -107,8 +131,25 @@ export default {
 <li>Messreihe für I = 1 … 6 A mit einem Magneten, dann mit zwei und drei Magneten.</li>
 <li>Polung umkehren und Magnet umdrehen: Wie ändert sich die Richtung der Auslenkung?</li>
 </ol>
-<div class="callout">Sicherheit: Bei hohen Strömen wird der dünne Draht warm. Strom nur für die Messung einschalten. Netzgerät mit Strombegrenzung verwenden.</div>`,
+<div class="callout">Sicherheit: Bei hohen Strömen wird der dünne Draht warm. Strom nur für die Messung einschalten. Netzgerät mit Strombegrenzung verwenden.</div>
+<h3>Modus Induktion</h3>
+<p>Die Drahtenden führen nicht zum Netzgerät, sondern über einen µV-Verstärker (×10 000) zur Messwerterfassung. Ein Ultraschallsensor misst gleichzeitig die Geschwindigkeit des Stabs.</p>
+<ol>
+<li>Auslenkung wählen, <b>Auslenken und loslassen</b>. Die Aufnahme startet von selbst. U(t) beschreiben: Wann ist U null, wann am größten?</li>
+<li>Mit kleiner und großer Auslenkung wiederholen (langsame und schnelle Bewegung). Mit 1, 2 und 3 Magneten wiederholen.</li>
+<li>Nach etwa 20 Schwingungen <b>Aufnahme auswerten</b>: Die Software trägt U über v auf (Steigung l·B) und bestimmt die Abklingzeit.</li>
+<li>Die Drahtenden kurzschließen und die Abklingzeit vergleichen.</li>
+<li>Den Magneten so verschieben, dass der Stab in Ruhe am Rand des Feldes hängt. Warum ist die Kurve jetzt verzerrt?</li>
+</ol>`,
     theorie: `
+<h3>Induktion im bewegten Leiter</h3>
+<p>Bewegt sich der Stab mit v senkrecht zu B, bewegen sich die Leitungselektronen mit. Auf jedes wirkt die Lorentzkraft e·v·B entlang des Stabs. Die Elektronen sammeln sich an einem Ende, bis das elektrische Feld E = U/l die Lorentzkraft ausgleicht:</p>
+<span class="formula tex">e\\, \\frac{U}{l} = e\\, v\\, B \\quad\\Rightarrow\\quad U = l\\, v\\, B</span>
+<p>Die Schaukel schwingt, v(t) ist fast sinusförmig. Deshalb ist auch U(t) eine gedämpfte Sinuskurve. In den Umkehrpunkten ist v = 0 und U = 0. Wirksam ist nur der Anteil von v senkrecht zu B.</p>
+<h3>Kurzgeschlossene Schaukel</h3>
+<p>Verbindet man die Drahtenden, fließt der Strom I = U/R. Auf den Stab wirkt dann die Kraft</p>
+<span class="formula tex">F = I\\, l\\, B = \\frac{l^2 B^2}{R}\\, v</span>
+<p>Sie ist der Bewegung entgegengerichtet (Lenz). Die Schwingung klingt schneller ab. Bei kleinen Magneten ist der Effekt klein, die Abklingzeit zeigt ihn aber.</p>
 <h3>Lorentzkraft auf einen Leiter</h3>
 <p>Im Leiter bewegen sich Elektronen. Auf jedes wirkt im Magnetfeld die Lorentzkraft. Alle Kräfte zusammen ergeben die Kraft auf den Leiter. Steht der Leiter senkrecht zum Feld, gilt:</p>
 <span class="formula tex">F = I\\, l\\, B</span>
@@ -121,7 +162,7 @@ export default {
 <h3>Feldlinienbild</h3>
 <p>Das kreisförmige Feld um den Leiter und das Feld des Magneten überlagern sich. Auf einer Seite zeigen beide in dieselbe Richtung, das Feld wird stärker. Auf der anderen Seite schwächen sie sich. Der Leiter wird zur Seite mit dem schwächeren Feld gedrückt.</p>
 <h3>Modellgrenzen</h3>
-<ul><li>Das Feld ist zwischen den Polen als homogen angenommen. B schwankt von Aufbau zu Aufbau um ±4 % um 0,10 T.</li><li>Die Masse der Drähte und ihre Erwärmung sind vernachlässigt. Die Schaukel ist leicht gedämpft.</li></ul>
+<ul><li>Im Modus Induktion: Luftdämpfung 0,09 1/s, kurzgeschlossen R = 0,05 Ω, Rauschen des Verstärkers etwa 20 mV am Ausgang. Am Rand des Magneten fällt B innerhalb weniger Millimeter ab.</li><li>Das Feld ist zwischen den Polen als homogen angenommen. B schwankt von Aufbau zu Aufbau um ±4 % um 0,10 T.</li><li>Die Masse der Drähte und ihre Erwärmung sind vernachlässigt. Die Schaukel ist leicht gedämpft.</li></ul>
 <h3>Was die Modellansicht zeigt</h3><ul><li><b>Gesamtfeld:</b> Feldlinien aus Magnetfeld und Leiterfeld. Die Linien drängen sich auf einer Seite des Stabs und weichen auf der anderen aus. Das Leiterfeld ist zur Verdeutlichung stark vergrößert.</li><li><b>Kräfte:</b> F<sub>L</sub> (orange), F<sub>G</sub> (grün) und die Kraft der Drähte (violett). Rechts das geschlossene Krafteck im Gleichgewicht.</li><li><b>3D-Aufbau:</b> Elektronen laufen entgegen der technischen Stromrichtung durch Drähte und Stab. Pfeile zeigen B, I und F.</li></ul>`,
     geraet: `
 <table class="spec"><tbody>
@@ -129,8 +170,11 @@ export default {
 <tr><td>Hufeisenmagnet</td><td>1 bis 3 Stück, Polbreite je 3 cm, B ≈ 0,1 T</td></tr>
 <tr><td>Netzgerät</td><td>0 … 6 A Gleichstrom, Strombegrenzung</td></tr>
 <tr><td>Skala</td><td>mm-Teilung hinter dem Stab</td></tr>
+<tr><td>Modus Induktion</td><td>µV-Verstärker ×10 000, Messwerterfassung 100 Werte/s, Ultraschall-Bewegungssensor</td></tr>
 </tbody></table>`,
     abi: `
+<details class="q"><summary>Die Schaukel (l = 9 cm, B = 0,10 T) geht mit v = 0,25 m/s durch die Ruhelage. Berechne U vor und nach dem Verstärker (×10 000). <span class="op">AFB I</span></summary><p>U = l·v·B = 0,09 m · 0,25 m/s · 0,10 T = 2,25 mV. Nach dem Verstärker 22,5 V.</p></details>
+<details class="q"><summary>Erkläre, warum U(t) bei Ruhelage am Rand des Magneten verzerrt ist. <span class="op">AFB II</span></summary><p>Schwingt der Stab aus dem Feld heraus, wird B dort klein. Dann ist U kleiner als bei gleicher Geschwindigkeit im Feld. Die Halbschwingung in den Magneten hinein sieht aus wie vorher, die andere ist abgeflacht.</p></details>
 <details class="q"><summary>Bei I = 4,0 A und l = 6 cm wird s = 3,2 cm abgelesen (L = 20 cm, m = 15 g). Berechne F und B. <span class="op">AFB II</span></summary><p>sin φ = 0,16, φ = 9,21°, tan φ = 0,162. F = m·g·tan φ = 0,015 kg · 9,81 N/kg · 0,162 ≈ 0,0239 N. B = F/(I·l) = 0,0239 N / (4,0 A · 0,06 m) ≈ 0,10 T.</p></details>
 <details class="q"><summary>Beschreibe, wie man aus der Messreihe nachweist, dass F ~ I gilt. <span class="op">AFB I</span></summary><p>F über I auftragen. Liegen die Punkte auf einer Ursprungsgeraden, ist F proportional zu I. Die Steigung ist l·B.</p></details>
 <details class="q"><summary>Strom wird umgepolt und gleichzeitig der Magnet umgedreht. Was passiert? Begründe. <span class="op">AFB II</span></summary><p>Die Auslenkung bleibt gleich. Beide Änderungen kehren die Kraftrichtung je einmal um, zweimal umkehren ergibt die alte Richtung.</p></details>
@@ -140,11 +184,15 @@ export default {
 
   async mount({ stage, controls, messwerte, ui, Chart, csvTools, fit }) {
     const { el, group, slider, segmented, check, button, fmt, dataTable, toast, display, gauss } = ui;
-    const S = { I: 3, on: false, pol: 1, nMag: 1, nTop: true, phi: 0, w: 0, ver: 0 };
+    const S = { I: 3, on: false, pol: 1, nMag: 1, nTop: true, phi: 0, w: 0, ver: 0, mode: 'ind', edge: false, closed: false, phi0: 10, rec: [], recOn: false, recT: 0, U: 0 };
     const len = () => S.nMag * L_PER;
     const bd = () => S.nTop ? 1 : -1;                                   // +1: N oben, Feld zeigt nach unten
-    const Ieff = () => S.on ? S.I * S.pol : 0;                          // + : Strom aus der Zeichenebene heraus
-    const Fx = () => Ieff() * bd() * len() * B0;                        // Kraft in +x (nach rechts, ins Joch hinein)
+    const Ieff = () => S.on && S.mode === 'kraft' ? S.I * S.pol : 0;                          // + : Strom aus der Zeichenebene heraus
+    const shiftM = () => S.edge ? SHIFT_EDGE : 0;                       // Magnet in +x verschoben
+    const fB = phi => { if (!S.edge) return 1; const x = LW * Math.sin(phi); return 1 / (1 + Math.exp(-x / 0.004)); };   // Feldanteil am Ort des Stabs
+    const Fx = () => S.mode === 'kraft' ? Ieff() * bd() * len() * B0 * fB(S.phi) : 0;   // Kraft in +x (nach rechts, ins Joch hinein)
+    const vx = () => LW * S.w * Math.cos(S.phi);
+    const Uind = () => bd() * len() * B0 * fB(S.phi) * vx();
 
     const gP = group('Netzgerät', { led: true });
     const cOn = check({ label: 'Strom einschalten', checked: false, onChange: v => { S.on = v; gP.led(v); } });
@@ -160,7 +208,23 @@ export default {
     const dS = display('Auslenkung s (Skala)'), dPhi = display('φ = arcsin(s / L)'), dF = display('F = m·g·tan φ');
     gMs.append(dS, dPhi, dF, el('div', { class: 'bar' }, button('Messwert übernehmen', () => take(), 'btn small primary')),
       el('p', { class: 'muted', style: 'font-size:12.5px;margin:8px 0 0' }, 'Erst messen, wenn die Schaukel ruht. m = 15 g, L = 20 cm, l = 3 cm je Magnet.'));
-    controls.append(gP, gM, gMs);
+    const gV = group('Versuch');
+    const segMode = segmented({ value: 'ind', options: [{ value: 'ind', label: 'Induktion (U = l·v·B)' }, { value: 'kraft', label: 'Kraft (F = I·l·B)' }], onChange: v => setMode(v) });
+    gV.append(el('div', { class: 'ctl' }, el('div', { style: 'grid-column:1/-1' }, segMode)));
+    const gI = group('Induktion: schwingende Schaukel', { led: true });
+    const sP0 = slider({ label: 'Auslenkung beim Loslassen', min: 2, max: 14, step: 0.5, value: S.phi0, unit: '°', digits: 1, onInput: v => { S.phi0 = v; } });
+    const segCl = segmented({ value: 'o', options: [{ value: 'o', label: 'Enden am Verstärker (offen)' }, { value: 'c', label: 'kurzgeschlossen' }], onChange: v => { S.closed = v === 'c'; } });
+    const segEd = segmented({ value: 'm', options: [{ value: 'm', label: 'Stab mitten im Feld' }, { value: 'e', label: 'Stab am Rand des Feldes' }], onChange: v => { S.edge = v === 'e'; S.ver++; } });
+    const bRec = button('Aufnahme starten', () => { if (S.recOn) stopRec(); else startRec(); });
+    const dUo = display('U am Verstärkerausgang');
+    gI.append(sP0, el('div', { class: 'bar' }, button('Auslenken und loslassen', () => release(), 'btn small primary'), button('Anhalten', () => { S.w = 0; S.phi = 0; })),
+      el('div', { class: 'ctl' }, el('div', { style: 'grid-column:1/-1' }, segCl)), el('div', { class: 'ctl' }, el('div', { style: 'grid-column:1/-1' }, segEd)),
+      el('div', { class: 'bar' }, bRec), dUo, el('div', { class: 'bar' }, button('Aufnahme auswerten', () => takeInd(), 'btn small primary')));
+    function setMode(v) { S.mode = v; gP.hidden = v !== 'kraft'; gMs.hidden = v !== 'kraft'; gI.hidden = v !== 'ind'; if (v === 'kraft') { S.edge = false; segEd.set('m'); stopRec(); } S.ver++; }
+    function startRec() { S.rec = []; S.recT = 0; S.recOn = true; bRec.textContent = 'Aufnahme stoppen'; gI.led(true); }
+    function stopRec() { S.recOn = false; bRec.textContent = 'Aufnahme starten'; gI.led(false); drawRec(); }
+    function release() { S.phi = -S.phi0 * Math.PI / 180; S.w = 0; startRec(); }
+    controls.append(gV, gI, gP, gM, gMs);
 
     // ---- Messwerte ----
     const rows = [];
@@ -177,6 +241,44 @@ export default {
           csvTools(() => ({ meta: ['Leiterschaukel', `m = ${MASS} kg, L = ${LW} m`], columns: [{ key: 'I', label: 'I in A' }, { key: 'l', label: 'l in m' }, { key: 's', label: 's in mm' }, { key: 'phi', label: 'phi in Grad' }, { key: 'F', label: 'F in N' }, { key: 'B', label: 'B in T' }], rows }), 'leiterschaukel_messreihe')),
         el('div', { class: 'chartbox' }, el('h4', {}, 'F/I über l: Steigung = B'), figL, resL)),
       el('div', { style: 'height:14px' }), tbl);
+    // ---- Messwerte Induktion ----
+    const rowsI = [];
+    const tblI = dataTable([
+      { key: 'l', label: 'l in cm', fmt: v => fmt(v * 100, 0) }, { key: 'cl', label: 'Schaltung', fmt: v => v ? 'kurzgeschl.' : 'offen' }, { key: 'k', label: 'Steigung U/v in mV·s/m', digits: 3 },
+      { key: 'B', label: 'B = Steigung/l in T', digits: 3 }, { key: 'tau', label: 'Abklingzeit τ in s', digits: 1 }
+    ], { onDelete: i => { rowsI.splice(i, 1); redrawI(); } });
+    const figR = el('div', { class: 'fig' }), figUV = el('div', { class: 'fig' });
+    const chR = new Chart(figR, { xlabel: 't in s', ylabel: 'U in V (nach Verstärker)' }), chUV = new Chart(figUV, { xlabel: 'v in m/s', ylabel: 'U in mV (am Stab)' });
+    const resUV = el('div', { class: 'result' }), resR = el('div', { class: 'result' });
+    messwerte.prepend(
+      el('h3', { style: 'margin:0 0 10px' }, 'Modus Induktion'),
+      el('div', { class: 'data' },
+        el('div', { class: 'chartbox' }, el('h4', {}, 'Letzte Aufnahme U(t)'), figR, resR,
+          csvTools(() => ({ meta: ['Leiterschaukel Induktion', 'U nach Verstaerker x10000'], columns: [{ key: 't', label: 't in s' }, { key: 'u', label: 'U in V' }, { key: 'v', label: 'v in m/s' }], rows: S.rec.map(([t, u, v]) => ({ t, u, v })) }), 'leiterschaukel_induktion')),
+        el('div', { class: 'chartbox' }, el('h4', {}, 'U über v (aus der Aufnahme)'), figUV, resUV)),
+      el('div', { style: 'height:10px' }), tblI, el('h3', { style: 'margin:22px 0 10px' }, 'Modus Kraft'));
+    function analyse() {
+      const r = S.rec; if (r.length < 200) return null;
+      const xs = r.map(p => p[2]), ys = r.map(p => p[1] / GAIN * 1000), f = fit.propFit(xs, ys);
+      const pk = []; for (let i = 2; i < r.length - 2; i++) { const a = Math.abs(r[i][1]); if (a > Math.abs(r[i - 1][1]) && a >= Math.abs(r[i + 1][1]) && a > Math.abs(r[i - 2][1]) && a >= Math.abs(r[i + 2][1]) && a > 0.05) pk.push([r[i][0], a]); }
+      const e = pk.length >= 4 ? fit.expDecayFit(pk.map(p => p[0]), pk.map(p => p[1])) : null;
+      return { f, pk, e, pts: xs.map((x, i) => [x, ys[i]]).filter((_, i) => i % 3 === 0) };
+    }
+    function drawRec() {
+      const a = analyse();
+      chR.set([{ color: '#7dffb8', points: S.rec.filter((_, i) => i % 2 === 0).map(p => [p[0], p[1]]) }, ...(a?.pk.length ? [{ color: '#ffd27a', mode: 'dot', points: a.pk }] : [])], a?.e ? [{ f: a.e.f, color: '#ffd27a' }] : []);
+      resR.innerHTML = a?.e ? `<div><span>Einhüllende der Maxima</span><br><b>τ = ${fmt(a.e.tau, 1)} s</b></div>` : '<span>Mindestens etwa 10 Schwingungen aufnehmen.</span>';
+      chUV.set(a ? [{ color: '#86dcff', mode: 'dot', points: a.pts }] : [], a?.f ? [{ f: a.f.f, color: '#ab93ff' }] : []);
+      resUV.innerHTML = a?.f ? `<div><span>Ursprungsgerade, R² = ${fmt(a.f.r2, 4)}</span><br><b>Steigung l·B = ${fmt(a.f.a, 3)} mV·s/m</b></div>` : '<span>Aufnahme starten und die Schaukel schwingen lassen.</span>';
+    }
+    function redrawI() { tblI.render(rowsI); }
+    function takeInd() {
+      if (S.recOn) stopRec();
+      const a = analyse(); if (!a?.f) { toast('Erst eine Aufnahme von einigen Schwingungen machen.'); return; }
+      rowsI.push({ l: len(), cl: S.closed, k: Math.abs(a.f.a), B: Math.abs(a.f.a) / 1000 / len(), tau: a.e ? a.e.tau : NaN }); redrawI();
+      toast(`Ausgewertet: l·B = ${fmt(Math.abs(a.f.a), 3)} mV·s/m → B = ${fmt(Math.abs(a.f.a) / 1000 / len(), 3)} T${a.e ? `, τ = ${fmt(a.e.tau, 1)} s` : ''}`);
+    }
+    drawRec(); redrawI(); setMode('ind');
     const cols = ['#86dcff', '#f2ac74', '#7fd6a0'];
     function redraw() {
       tbl.render(rows);
@@ -204,18 +306,19 @@ export default {
 
     // Gesamtfeld (Seitenansicht, Bildschirmkoordinaten): homogenes Feld + stark vergrößertes Leiterfeld
     function fieldPaths(cx, cy) {
+      const DX = shiftM() * PX;
       const cur = Ieff() / IMAX, r0 = 21 * Math.sqrt(Math.abs(cur)) * Math.sign(cur), down = bd();
       const B = (x, y) => { const dx = x - cx, dy = -(y - cy), r2 = dx * dx + dy * dy + 30; const bx = r0 * r0 * (-dy) / r2 * Math.sign(r0) * 1, by = -down + r0 * r0 * dx / r2 * Math.sign(r0); return [bx, -by]; };
       const yA = down > 0 ? LEG.top[1] + 1 : LEG.bot[0] - 1, yB = down > 0 ? LEG.bot[0] : LEG.top[1];
       let d = '', arrows = '';
-      for (let x0 = LEG.x0 + 8; x0 <= LEG.x1 - 4; x0 += 13) {
+      for (let x0 = LEG.x0 + 8 + DX; x0 <= LEG.x1 - 4 + DX; x0 += 13) {
         let x = x0, y = yA, path = `M${x.toFixed(1)} ${y.toFixed(1)}`, n = 0, mid = null;
         while (n++ < 500) {
           let [bx, by] = B(x, y); const m = Math.hypot(bx, by) || 1; bx /= m; by /= m;
           const [bx2, by2] = B(x + bx * 1.5, y + by * 1.5); const m2 = Math.hypot(bx2, by2) || 1;
           x += (bx + bx2 / m2) * 1.5; y += (by + by2 / m2) * 1.5;
           if (Math.hypot(x - cx, y - cy) < RODR + 2) break;
-          if ((down > 0 && y >= yB) || (down < 0 && y <= yB) || x < LEG.x0 - 30 || x > LEG.x1 + 10) break;
+          if ((down > 0 && y >= yB) || (down < 0 && y <= yB) || x < LEG.x0 - 30 + DX || x > LEG.x1 + 10 + DX) break;
           if (n % 2 === 0) path += ` L${x.toFixed(1)} ${y.toFixed(1)}`;
           if (n === 26) mid = [x, y, bx, by];
         }
@@ -230,6 +333,7 @@ export default {
       box.insertAdjacentHTML('beforeend', svgMarkup());
       const svg = box.querySelector('svg'), q = id => svg.querySelector('#' + id);
       { let h = `<rect x="${LEG.x0 + 6}" y="396" width="${LEG.x1 - LEG.x0 - 12}" height="22" fill="#efe9dc" opacity=".9"/>`; for (let mm = -60; mm <= 60; mm += 5) { const x = PIV[0] + mm / 1000 * PX; if (x < LEG.x0 + 8 || x > LEG.x1 - 8) continue; const maj = mm % 10 === 0; h += `<rect x="${(x - 0.5).toFixed(1)}" y="396" width="1" height="${maj ? 10 : 6}" fill="#111"/>`; if (maj && mm % 20 === 0) h += `<text x="${x.toFixed(1)}" y="415" text-anchor="middle" fill="#111">${mm / 10}</text>`; } q('sScale').innerHTML = h; }
+      { let h = ''; for (let i = 1; i < 10; i++) h += `<line x1="${604 + i * 34.2}" y1="88" x2="${604 + i * 34.2}" y2="288"/>`; for (let i = 1; i < 8; i++) h += `<line x1="604" y1="${88 + i * 25}" x2="946" y2="${88 + i * 25}"${i === 4 ? ' stroke="#2a5a46"' : ''}/>`; q('sIGrid').innerHTML = h; }
       let raf = 0, acc = 0, ver = -1;
       function frame() {
         raf = requestAnimationFrame(frame);
@@ -243,15 +347,28 @@ export default {
           q('sLegT').setAttribute('fill', nt ? '#c4231b' : '#2f8a3c'); q('sLegB').setAttribute('fill', nt ? '#2f8a3c' : '#c4231b');
           q('sPT').textContent = nt ? 'N' : 'S'; q('sPB').textContent = nt ? 'S' : 'N';
           q('sMagT').textContent = `${S.nMag} Magnet${S.nMag > 1 ? 'e' : ''} nebeneinander: l = ${S.nMag * 3} cm`;
+          q('sMagG').setAttribute('transform', `translate(${(shiftM() * PX).toFixed(1)} 0)`);
         }
         q('sPhi').setAttribute('x', PIV[0] + 12); q('sPhi').setAttribute('y', PIV[1] + 40); q('sPhi').textContent = Math.abs(phi) > 0.003 ? `φ = ${fmt(phi * 180 / Math.PI, 1)}°` : '';
-        q('sCurT').textContent = S.on ? `Strom: ${fmt(S.I, 1)} A, ${ie > 0 ? 'aus der Zeichenebene heraus (⊙)' : 'in die Zeichenebene hinein (⊗)'}` : 'Strom aus';
+        q('sCurT').textContent = S.mode === 'ind' ? (S.closed ? 'Drahtenden kurzgeschlossen: Induktionsstrom fließt' : 'Drahtenden am µV-Verstärker (kein Strom)') : S.on ? `Strom: ${fmt(S.I, 1)} A, ${ie > 0 ? 'aus der Zeichenebene heraus (⊙)' : 'in die Zeichenebene hinein (⊗)'}` : 'Strom aus';
         q('sSread').textContent = `Skala: s = ${fmt(reading(), 1)} mm`;
         // Realteil rechts
         q('sDI').textContent = fmt(S.on ? S.I : 0, 2); q('sLed').setAttribute('fill', S.on ? '#ff4b3e' : '#3a1010');
         q('sPol').textContent = S.pol > 0 ? 'Polung: normal' : 'Polung: umgekehrt';
-        q('sPsuG').setAttribute('opacity', model ? 0 : 1); q('sModelR').setAttribute('opacity', model ? 1 : 0);
-        q('sFieldG').setAttribute('opacity', model ? 1 : 0); q('sForceG').setAttribute('opacity', model ? 1 : 0);
+        const ind = S.mode === 'ind';
+        q('sPsuG').setAttribute('opacity', !model && !ind ? 1 : 0); q('sModelR').setAttribute('opacity', model && !ind ? 1 : 0);
+        q('sFieldG').setAttribute('opacity', model ? 1 : 0); q('sForceG').setAttribute('opacity', model && !ind ? 1 : 0);
+        q('sIndG').setAttribute('opacity', ind ? 1 : 0); q('sIndM').setAttribute('opacity', model && ind ? 1 : 0); q('sSens').setAttribute('opacity', ind ? 1 : 0);
+        if (ind) {
+          const U = S.U * GAIN; if (S.closed && Math.abs(U) > 0.05) q('sCur').innerHTML = U > 0 ? '<circle r="3"/>' : '<path d="M-5 -5 L5 5 M5 -5 L-5 5" fill="none"/>';
+          const r = S.rec, dur = Math.max(10, r.length ? r[r.length - 1][0] : 0), XS = t => 604 + t / dur * 342, YS = u => 188 - Math.max(-98, Math.min(98, u / 2 * 25)), YV = v => 188 - Math.max(-98, Math.min(98, v * 250));
+          let du = '', dv = ''; for (let i = 0; i < r.length; i += 2) { du += `${du ? 'L' : 'M'}${XS(r[i][0]).toFixed(1)} ${YS(r[i][1]).toFixed(1)}`; dv += `${dv ? 'L' : 'M'}${XS(r[i][0]).toFixed(1)} ${YV(r[i][2]).toFixed(1)}`; }
+          q('sIU').setAttribute('d', du); q('sIV').setAttribute('d', dv);
+          q('sIT').textContent = `2 V/Div   ${fmt(dur / 10, 1)} s/Div   v: 0,1 m/s je Div`; q('sIU0').textContent = `U = ${fmt(U, 2)} V`; q('sIR').textContent = S.recOn ? '● Aufnahme läuft' : '';
+          const vl = vx() * 420; q('sV').setAttribute('x1', rx); q('sV').setAttribute('y1', ry + 18); q('sV').setAttribute('x2', rx + vl); q('sV').setAttribute('y2', ry + 18);
+          q('sV').setAttribute('opacity', model && Math.abs(vl) > 4 ? 1 : 0); q('sVt').setAttribute('x', rx + vl + (vl > 0 ? 6 : -14)); q('sVt').setAttribute('y', ry + 22); q('sVt').setAttribute('opacity', model && Math.abs(vl) > 4 ? 1 : 0);
+          q('sIM1').textContent = `U = l·v·B = ${fmt(len() * 100, 0)} cm · ${fmt(Math.abs(vx()), 3)} m/s · ${fmt(B0 * fB(S.phi), 3)} T = ${fmt(Math.abs(S.U) * 1000, 2)} mV`;
+        } else { q('sV').setAttribute('opacity', 0); q('sVt').setAttribute('opacity', 0); }
         if (model) {
           if (++acc % 3 === 0) q('sField').innerHTML = fieldPaths(rx, ry);
           const k = 950, FL = Fx(), FG = MASS * G, Ft = Math.hypot(FL, FG);
@@ -318,6 +435,10 @@ export default {
       // Netzgerät und Kabel
       const psu = powerSupply(THREE, { w: 0.26, h: 0.13, d: 0.2, label: 'Hochstrom-Netzgerät', displays: 1, knobs: 2, sockets: ['red', 'black'] });
       psu.position.set(-0.32, 0, 0.12); psu.rotation.y = 0.5; scene.add(psu); scene.updateMatrixWorld(true);
+      const amp = powerSupply(THREE, { w: 0.24, h: 0.11, d: 0.18, label: 'µV-Verstärker ×10⁴', displays: 1, knobs: 2, sockets: ['red', 'black'], color: 'light', dispColor: ['#7dffb8', '#081210'] });
+      amp.position.set(-0.32, 0, 0.12); amp.rotation.y = 0.5; scene.add(amp);
+      const sens = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.04), M.housing); sens.position.set(-0.17, YR, 0.0); scene.add(sens);
+      const sensF = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.004, 20), M.steel); sensF.rotation.z = Math.PI / 2; sensF.position.set(-0.153, YR, 0); scene.add(sensF);
       const wp = o => o.getWorldPosition(new THREE.Vector3());
       const tA = wp(posts[0]).add(new THREE.Vector3(0, 0.01, 0)), tB = wp(posts[1]).add(new THREE.Vector3(0, 0.01, 0));
       const cR = cable(THREE, psu.socketWorld(0), tA, 0xc4231b, 0.2), cB = cable(THREE, psu.socketWorld(1), tB, 0x151515, 0.25); scene.add(cR, cB);
@@ -325,7 +446,8 @@ export default {
       const modelG = new THREE.Group(); scene.add(modelG);
       const bArrows = []; for (let i = 0; i < 5; i++) for (let j = 0; j < 3; j++) { const a = arrow(THREE, 0x86dcff, { radius: 0.0011, head: 0.008 }); bArrows.push({ a, x: -0.02 + i * 0.025, z: (j - 1) * 0.03 }); modelG.add(a); }
       const aF = arrow(THREE, 0xf2ac74, { radius: 0.0025, head: 0.014 }), aI = arrow(THREE, 0xffe08a, { radius: 0.0016, head: 0.01 }), aG = arrow(THREE, 0x7fd6a0, { radius: 0.002, head: 0.012 });
-      modelG.add(aF, aI, aG);
+      const aV = arrow(THREE, 0xf2ac74, { radius: 0.002, head: 0.012 });
+      modelG.add(aF, aI, aG, aV);
       const lF = label(THREE, 'F_L', { color: '#f2ac74', size: 0.014 }), lB = label(THREE, 'B', { color: '#86dcff', size: 0.014 }), lI = label(THREE, 'I (technisch)', { color: '#ffe08a', size: 0.011 }), lG = label(THREE, 'F_G', { color: '#7fd6a0', size: 0.012 });
       modelG.add(lF, lB, lI, lG);
       const ePool = glowPool(THREE, modelG, 60, 0x86dcff, 0.006);
@@ -343,13 +465,17 @@ export default {
         const model = MM.model;
         swing.rotation.z = S.phi;
         if (magG.children.length !== S.nMag || magG.userData.top !== S.nTop) { buildMagnets(); magG.userData.top = S.nTop; }
-        psu.displays[0].draw((S.on ? S.I : 0).toFixed(2), 'A'); psu.setKnob(0, S.I / IMAX);
+        const ind = S.mode === 'ind'; psu.visible = !ind; amp.visible = ind; sens.visible = sensF.visible = ind;
+        psu.displays[0].draw((S.on ? S.I : 0).toFixed(2), 'A'); psu.setKnob(0, S.I / IMAX); amp.displays[0].draw(fmt(S.U * GAIN, 2), 'V');
+        magG.position.x = shiftM(); block.position.x = 0.04 + shiftM();
         const zl = (S.nMag * 0.032) / 2 + 0.01;
-        lN.position.set(-0.03, YR + (S.nTop ? 0.062 : -0.062), zl); lS.position.set(-0.03, YR + (S.nTop ? -0.062 : 0.062), zl);
+        lN.position.set(-0.03 + shiftM(), YR + (S.nTop ? 0.062 : -0.062), zl); lS.position.set(-0.03 + shiftM(), YR + (S.nTop ? -0.062 : 0.062), zl);
         modelG.visible = model; if (!model) return;
         const rodPos = new THREE.Vector3(LW * Math.sin(S.phi), YP - LW * Math.cos(S.phi), 0);
         const down = bd(), ie = Ieff();
-        for (const b of bArrows) { b.a.visible = Math.abs(b.z) <= (S.nMag - 1) * 0.016 + 0.001; b.a.set(new THREE.Vector3(b.x, YR + down * 0.03, b.z), new THREE.Vector3(0, -down * 0.06, 0)); }
+        for (const b of bArrows) { b.a.visible = Math.abs(b.z) <= (S.nMag - 1) * 0.016 + 0.001; b.a.set(new THREE.Vector3(b.x + shiftM(), YR + down * 0.03, b.z), new THREE.Vector3(0, -down * 0.06, 0)); }
+        aV.visible = ind && Math.abs(vx()) > 0.01; if (aV.visible) aV.set(rodPos.clone().add(new THREE.Vector3(0, -0.012, 0.04)), new THREE.Vector3(vx() * 0.3, 0, 0));
+        aF.visible = !ind; lF.visible = !ind && lF.visible; aG.visible = lG.visible = !ind;
         lB.position.set(0.1, YR + 0.005, (S.nMag * 0.032) / 2 + 0.012);
         const FL = Fx(), kF = 1.6;
         aF.set(rodPos, new THREE.Vector3(FL * kF, 0, 0)); lF.position.copy(rodPos).add(new THREE.Vector3(FL * kF + Math.sign(FL || 1) * 0.015, 0.012, 0)); lF.visible = Math.abs(FL) > 0.002;
@@ -371,21 +497,26 @@ export default {
     const host = viewHost(stage, { id: 'leiterschaukel', views: { '3d': view3d, '2d': view2d }, initial: '3d', modelInfo: 'Gesamtfeld, Kräfte, Elektronen' });
 
     // ---- Hauptschleife: Pendelbewegung ----
-    let raf = 0, last = performance.now(), acc = 0;
+    let raf = 0, last = performance.now(), acc = 0, recAcc = 0, accR = 0;
     function loop(now) {
       raf = requestAnimationFrame(loop);
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
-      const n = 8, h = dt / n, F = Fx();
+      const n = 10, h = dt / n, F = Fx(), ind = S.mode === 'ind';
       for (let i = 0; i < n; i++) {
-        const a = (F * Math.cos(S.phi) - MASS * G * Math.sin(S.phi)) / (MASS * LW) - GAMMA * S.w;
+        let a;
+        if (ind) { const lb = len() * B0 * fB(S.phi), Fb = S.closed ? -lb * lb * vx() / R_LOOP : 0; a = (Fb * Math.cos(S.phi) - MASS * G * Math.sin(S.phi)) / (MASS * LW) - GAMMA_AIR * S.w; }
+        else a = (F * Math.cos(S.phi) - MASS * G * Math.sin(S.phi)) / (MASS * LW) - GAMMA * S.w;
         S.w += a * h; S.phi += S.w * h;
         if (Math.abs(S.phi) > PHI_MAX) { S.phi = Math.sign(S.phi) * PHI_MAX; S.w = -0.3 * S.w; }
+        S.U = Uind();
+        if (S.recOn) { S.recT += h; recAcc += h; if (recAcc >= 0.01) { recAcc -= 0.01; S.rec.push([S.recT, S.U * GAIN + gauss(0.02), vx() + gauss(0.002)]); } if (S.recT > 40) stopRec(); }
       }
-      S.phi += gauss(0.00002);
+      if (!ind) S.phi += gauss(0.00002);
       acc += dt;
-      if (acc > 0.1) { acc = 0; const s = reading(), phi = Math.asin(Math.min(1, Math.abs(s) / 1000 / LW)); dS.set(`${fmt(s, 1)} mm`); dPhi.set(`${fmt(phi * 180 / Math.PI, 2)} °`); dF.set(`${fmt(MASS * G * Math.tan(phi) * 1000, 1)} mN`); }
+      accR += dt; if (accR > 0.5 && S.recOn) { accR = 0; drawRec(); }
+      if (acc > 0.1) { acc = 0; dUo.set(`${fmt(S.U * GAIN, 2)} V`); const s = reading(), phi = Math.asin(Math.min(1, Math.abs(s) / 1000 / LW)); dS.set(`${fmt(s, 1)} mm`); dPhi.set(`${fmt(phi * 180 / Math.PI, 2)} °`); dF.set(`${fmt(MASS * G * Math.tan(phi) * 1000, 1)} mN`); }
     }
     raf = requestAnimationFrame(loop);
-    return { destroy() { cancelAnimationFrame(raf); host.destroy(); chI.destroy(); chL.destroy(); } };
+    return { destroy() { cancelAnimationFrame(raf); host.destroy(); chI.destroy(); chL.destroy(); chR.destroy(); chUV.destroy(); } };
   }
 };

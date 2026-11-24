@@ -13,6 +13,54 @@ const lamOf = U => H / Math.sqrt(2 * ME * QE * U * (1 + QE * U / (2 * ME * C * C
 const lamNR = U => H / Math.sqrt(2 * ME * QE * U);
 const sinc = u => Math.abs(u) < 1e-9 ? 1 : Math.sin(u) / u;
 const NBAR = 300, X0 = 60, X1 = 940;
+// Elektronenbeugungsröhre (Handbuch Versuch 7): Graphitfolie, Schirmabstand L = 13,5 cm
+const LB = 0.135, DG = [213e-12, 123e-12, 107e-12], RING_A = [1, 0.62, 0.22], SCR_R = 0.065;
+const ringR = (U, d) => { const l = lamOf(U), s = l / (2 * d); return s >= 1 ? Infinity : LB * Math.tan(2 * Math.asin(s)); };
+function drawScreen(cv, U, model) {
+  const g = cv.getContext('2d'), W = cv.width, c = W / 2, pxm = c / SCR_R, img = g.createImageData(W, W), d = img.data;
+  const R = DG.map(dd => ringR(U, dd)), sig = 0.0007;
+  for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
+    const r = Math.hypot(x - c, y - c) / pxm, i4 = (y * W + x) * 4; if (r > SCR_R) { d[i4 + 3] = 0; continue; }
+    let I = 1.6 * Math.exp(-((r / 0.0022) ** 2)) + 0.16 * Math.exp(-r / 0.012);
+    for (let k = 0; k < 3; k++) I += RING_A[k] * 0.55 * Math.exp(-(((r - R[k]) / sig) ** 2));
+    const v = Math.min(1, I) * (1 - 0.25 * (r / SCR_R) ** 2);
+    d[i4] = 16 + 150 * v; d[i4 + 1] = 32 + 223 * v; d[i4 + 2] = 22 + 150 * v; d[i4 + 3] = 255;
+  }
+  g.clearRect(0, 0, W, W); g.putImageData(img, 0, 0);
+  if (model) { g.strokeStyle = 'rgba(199,182,255,.8)'; g.setLineDash([5, 4]); g.lineWidth = 1.5; R.slice(0, 2).forEach((rr, k) => { g.beginPath(); g.arc(c, c, rr * pxm, 0, 7); g.stroke(); g.fillStyle = '#c7b6ff'; g.font = '13px "IBM Plex Sans"'; g.fillText(k ? 'd = 123 pm' : 'd = 213 pm', k ? c + rr * pxm * 0.72 + 4 : c - rr * pxm * 0.72 - 84, c - rr * pxm * 0.72 - 4); }); g.setLineDash([]); }
+}
+const svgB = () => `
+<svg viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans, system-ui, sans-serif" role="img" aria-label="Elektronenbeugungsröhre: oben die Röhre von der Seite, unten der Leuchtschirm von vorn mit Beugungsringen und Maßstab">
+<defs>
+  <linearGradient id="bBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c2024"/><stop offset="1" stop-color="#121518"/></linearGradient>
+  <filter id="bGl"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect width="1000" height="620" fill="url(#bBg)"/>
+<text x="560" y="34" fill="#8e979d" font-size="13">Röhre von der Seite (nicht maßstäblich)</text>
+<path d="M560 130 H700 A110 110 0 1 1 700 170 H560 Z" fill="#9fb4c2" fill-opacity=".08" stroke="#6b7a85"/>
+<rect x="566" y="140" width="16" height="20" rx="3" fill="#ff8a3d" filter="url(#bGl)"/><text x="570" y="214" fill="#8e979d" font-size="11" text-anchor="middle">Kathode</text>
+<rect x="640" y="128" width="8" height="44" fill="#8a9095"/><rect x="648" y="144" width="3" height="12" fill="#5a5f63"/><text x="644" y="196" fill="#8e979d" font-size="11" text-anchor="middle">Anode mit Graphitfolie</text>
+<path d="M915 70 A110 110 0 0 1 915 230" fill="none" stroke="#7dffb8" stroke-width="5" opacity=".6" filter="url(#bGl)"/><text x="925" y="250" fill="#8e979d" font-size="11">Schirm</text>
+<line x1="582" y1="150" x2="648" y2="150" stroke="#86dcff" stroke-width="2" opacity=".7"/>
+<g id="bCones" opacity="0" stroke="#c7b6ff" stroke-width="1.4" fill="none"></g>
+<text id="bUT" x="600" y="100" fill="#ece6dc" font-size="13" font-family="IBM Plex Mono, monospace"></text>
+<text x="700" y="290" fill="#8e979d" font-size="11" text-anchor="middle">L = 13,5 cm (Folie bis Schirm)</text>
+<text x="40" y="34" fill="#8e979d" font-size="13">Leuchtschirm von vorn</text>
+<foreignObject x="40" y="44" width="440" height="440"><canvas xmlns="http://www.w3.org/1999/xhtml" id="bCv" width="440" height="440" style="width:100%;height:100%;display:block"></canvas></foreignObject>
+<rect x="40" y="494" width="440" height="40" fill="#efe9dc" stroke="#9c968a"/>
+<g id="bRuler" font-family="IBM Plex Mono, monospace" font-size="11" fill="#111"></g>
+<g id="bM1" style="cursor:ew-resize"><line y1="44" y2="534" stroke="#7fd6a0" stroke-width="1.4"/><rect x="-14" y="534" width="28" height="44" fill="transparent"/><path d="M0 538 l9 14 h-18z" fill="#7fd6a0"/></g>
+<g id="bM2" style="cursor:ew-resize"><line y1="44" y2="534" stroke="#ab93ff" stroke-width="1.4"/><rect x="-14" y="534" width="28" height="44" fill="transparent"/><path d="M0 538 l9 14 h-18z" fill="#ab93ff"/></g>
+<text id="bD" x="480" y="600" fill="#ece6dc" font-size="15" text-anchor="end" font-family="IBM Plex Mono, monospace"></text>
+<g id="bLat" opacity="0">
+  <rect x="540" y="320" width="420" height="270" rx="8" fill="#0a0c0e" stroke="#5a4b8a"/>
+  <text x="556" y="344" fill="#c7b6ff" font-size="13">Graphit: Netzebenen mit zwei Abständen</text>
+  <g id="bHex" stroke="#86dcff" stroke-width="1.2" fill="none"></g>
+  <text x="556" y="566" fill="#c7c1b7" font-size="12">Bragg: λ = 2d·sin θ, Ablenkung 2θ. Viele kleine Kristalle in allen Lagen</text>
+  <text x="556" y="582" fill="#c7c1b7" font-size="12">→ die gebeugten Strahlen liegen auf Kegelmänteln → Ringe.</text>
+</g>
+<text id="bInfo" x="560" y="330" fill="#c9c3ba" font-size="13"></text>
+</svg>`;
 
 const svgMarkup = () => `
 <svg viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans, system-ui, sans-serif" role="img" aria-label="Elektronenstrahlröhre mit Kanone, Doppelspalt, Linsen und Detektor; darunter das Detektorbild mit einzelnen Treffern, Maßstab und Messmarkern">
@@ -60,10 +108,17 @@ const svgMarkup = () => `
 </svg>`;
 
 export default {
-  intro: 'Elektronen fliegen einzeln durch einen Doppelspalt. Jedes trifft den Detektor an genau einer Stelle, wie ein Teilchen. Nach Tausenden Treffern entsteht ein Streifenmuster, wie bei einer Welle. Aus dem Streifenabstand folgt die Wellenlänge der Elektronen, und sie passt zu λ = h/p.',
+  intro: 'Zwei Versuche zur Welleneigenschaft von Elektronen. In der <b>Elektronenbeugungsröhre</b> (Schulversuch) werden Elektronen an einer Graphitfolie gebeugt, und auf dem Schirm erscheinen Ringe. Im <b>Doppelspaltversuch</b> fliegen Elektronen einzeln durch einen Doppelspalt. Jedes trifft den Detektor an genau einer Stelle, wie ein Teilchen. Nach Tausenden Treffern entsteht ein Streifenmuster, wie bei einer Welle. Aus dem Streifenabstand folgt die Wellenlänge der Elektronen, und sie passt zu λ = h/p.',
   docs: {
     durchfuehrung: `
-<h3>Aufbau</h3>
+<h3>Elektronenbeugungsröhre</h3>
+<p>In einer Glaskugel werden Elektronen aus der Glühkathode mit U = 2 … 5 kV beschleunigt. Sie treffen auf eine dünne Folie aus vielen kleinen Graphitkristallen. Der Leuchtschirm liegt L = 13,5 cm hinter der Folie. Raum abdunkeln.</p>
+<ol>
+<li>Spannung auf 4 kV stellen und die Ringe beschreiben. Was passiert mit den Ringen, wenn U größer wird?</li>
+<li>Die beiden Marker auf gegenüberliegende Stellen des inneren Rings legen und den Durchmesser D übernehmen. Dasselbe für den äußeren Ring.</li>
+<li>Für mehrere Spannungen wiederholen. λ aus den Ringen berechnen und mit λ = h/p vergleichen.</li>
+</ol>
+<h3>Doppelspalt: Aufbau</h3>
 <p>In einer Vakuumröhre werden Elektronen aus einer Glühkathode mit der Spannung U beschleunigt. Sie treffen auf eine Folie mit zwei Spalten im Abstand g = 2 µm (Breite 0,5 µm). Weil die Wellenlänge nur wenige Pikometer beträgt, ist das Muster sehr klein. Elektronenlinsen vergrößern es 20 000-fach auf den Detektor. Der Detektor meldet jedes einzelne Elektron als hellen Punkt.</p>
 <h3>Durchführung</h3>
 <ol>
@@ -74,6 +129,10 @@ export default {
 <li>Einen Spalt schließen und danach die Welcher-Weg-Messung einschalten. Was passiert mit den Streifen?</li>
 </ol>`,
     theorie: `
+<h3>Beugung an Graphit</h3>
+<p>Graphit hat zwei wichtige Netzebenenabstände, d₁ = 213 pm und d₂ = 123 pm. Die Folie besteht aus vielen kleinen Kristallen in allen Lagen. Einige erfüllen immer die Bragg-Bedingung und lenken den Strahl um 2θ ab. Die abgelenkten Strahlen liegen auf einem Kegelmantel, auf dem Schirm entsteht ein Ring mit dem Radius R:</p>
+<span class="formula tex">\\lambda = 2\\, d\\, \\sin\\theta \\qquad \\tan 2\\theta = \\frac{R}{L} \\quad\\Rightarrow\\quad \\lambda = 2\\, d\\, \\sin\\!\\left(\\tfrac12 \\arctan\\frac{R}{L}\\right) \\approx d\\, \\frac{R}{L}</span>
+<p>Der größere Ring gehört zum kleineren Netzebenenabstand. Mit wachsender Spannung werden die Ringe kleiner, weil λ kleiner wird.</p>
 <h3>De-Broglie-Wellenlänge</h3>
 <p>Ein Elektron mit dem Impuls p verhält sich bei der Ausbreitung wie eine Welle mit der Wellenlänge</p>
 <span class="formula tex">\\lambda = \\frac{h}{p} \\quad\\text{mit}\\quad p = \\sqrt{2\\, m\\, e\\, U} \\quad\\Rightarrow\\quad \\lambda = \\frac{h}{\\sqrt{2\\, m\\, e\\, U}}</span>
@@ -90,7 +149,8 @@ export default {
 <h3>Was die Modellansicht zeigt</h3><ul><li><b>Wahrscheinlichkeitswelle</b> (Draufsicht, λ stark vergrößert): Hinter beiden Spalten breitet sich ψ aus und überlagert sich. Wo sich die Wellen verstärken, ist die Trefferwahrscheinlichkeit hoch.</li><li>Mit Welcher-Weg-Messung sind die Wellen beider Spalte unterscheidbar (blau und grün). Sie überlagern sich nicht mehr zu Streifen.</li><li>Über dem Detektor stehen das Histogramm der Treffer und die berechnete Kurve |ψ|².</li></ul>`,
     geraet: `
 <table class="spec"><tbody>
-<tr><td>Beschleunigungsspannung</td><td>20 … 60 kV</td></tr>
+<tr><td>Beugungsröhre</td><td>Graphitfolie (d = 213 pm, 123 pm), L = 13,5 cm, U = 2 … 5 kV, Heizstrom etwa 250 mA, Schirm Ø 13 cm</td></tr>
+<tr><td>Beschleunigungsspannung</td><td>Doppelspalt: 20 … 60 kV</td></tr>
 <tr><td>Doppelspalt</td><td>g = 2,0 µm, b = 0,5 µm (Kupferfolie)</td></tr>
 <tr><td>Abstand Spalt–Linsensystem</td><td>a = 0,35 m</td></tr>
 <tr><td>Vergrößerung</td><td>V = 20 000 (Elektronenlinsen)</td></tr>
@@ -98,6 +158,7 @@ export default {
 </tbody></table>
 <p class="muted" style="margin-top:12px">Echte Schulversuche zeigen meist die Elektronenbeugung an Graphit. Den Doppelspalt mit Elektronen gibt es als Film- und Bildmaterial (Jönsson 1961, Tonomura 1989).</p>`,
     abi: `
+<details class="q"><summary>Bei U = 3,6 kV hat der innere Ring den Durchmesser D = 2,9 cm (L = 13,5 cm, d = 213 pm). Berechne λ und vergleiche mit h/p. <span class="op">AFB II</span></summary><p>R = 1,45 cm, λ = 2·213 pm·sin(½·arctan(1,45/13,5)) ≈ 22,8 pm. h/√(2meU) = 20,5 pm. Die Abweichung kommt unter anderem von der gewölbten Schirmfläche.</p></details>
 <details class="q"><summary>Berechne die De-Broglie-Wellenlänge für U = 40 kV (nichtrelativistisch). <span class="op">AFB I</span></summary><p>λ = h/√(2meU) = 6,626·10⁻³⁴ / √(2·9,109·10⁻³¹·1,602·10⁻¹⁹·4,0·10⁴) ≈ 6,1·10⁻¹² m.</p></details>
 <details class="q"><summary>Auf dem Detektor liegen zwischen 10 Streifenabständen 182 mm (U = 50 kV). Bestimme λ. <span class="op">AFB II</span></summary><p>d = 18,2 mm. λ = d·g/(V·a) = 18,2·10⁻³ · 2,0·10⁻⁶ / (20000 · 0,35) ≈ 5,2·10⁻¹² m. Erwartet (relativistisch): 5,36 pm.</p></details>
 <details class="q"><summary>Erkläre, warum das Streifenmuster auch entsteht, wenn sich immer nur ein Elektron in der Röhre befindet. <span class="op">AFB II</span></summary><p>Das Muster entsteht nicht durch Wechselwirkung vieler Elektronen. Für jedes einzelne Elektron gibt die Wahrscheinlichkeitswelle |ψ|² an, wo es mit welcher Wahrscheinlichkeit auftrifft. Erst die Summe vieler Einzeltreffer macht diese Verteilung sichtbar.</p></details>
@@ -109,6 +170,8 @@ export default {
     const { el, group, slider, segmented, check, button, fmt, dataTable, toast, display } = ui;
     const S = { U: 50000, open: 'both', ww: false, rate: 30, span: 100, k: 5, m1: -20, m2: 20, hits: [], ver: 0 };
     const changed = () => { S.ver++; S.hits.length = 0; };
+    const SB = { on: true, U: 4000, m1: -1.25, m2: 1.25, setup: 'br' };
+    let hostRef = null;
     // Wahrscheinlichkeitsdichte auf dem Detektor (x in mm, nach der Vergrößerung)
     function prob(xmm) {
       const lam = lamOf(S.U), s = (xmm * 1e-3 / V) / A, env = sinc(Math.PI * B_SLIT * s / lam) ** 2;
@@ -131,7 +194,40 @@ export default {
     const sK = slider({ label: 'Streifenabstände k zwischen den Markern', min: 1, max: 10, step: 1, value: S.k, onInput: v => { S.k = v; } });
     const dDx = display('Δx (Marker 1 → 2)'), dL2 = display('λ = Δx·g / (k·V·a)');
     gM.append(sK, dDx, dL2, el('div', { class: 'bar' }, button('Messwert übernehmen', () => take(), 'btn small primary')));
-    controls.append(gQ, gS, gM);
+    const gV = group('Versuch');
+    const segV = segmented({ value: 'br', options: [{ value: 'br', label: 'Beugungsröhre (Graphit)' }, { value: 'ds', label: 'Doppelspalt' }], onChange: v => setSetup(v) });
+    gV.append(el('div', { class: 'ctl' }, el('div', { style: 'grid-column:1/-1' }, segV)));
+    const gB = group('Elektronenbeugungsröhre', { led: true }); gB.led(true);
+    const sUB = slider({ label: 'Anodenspannung U', min: 2, max: 5, step: 0.1, value: 4, unit: 'kV', digits: 1, onInput: v => { SB.U = v * 1000; } });
+    const dLB = display('λ = h/p (de Broglie)'), dDB = display('Durchmesser D zwischen den Markern');
+    gB.append(sUB, dLB, dDB, el('div', { class: 'bar' }, button('als inneren Ring übernehmen', () => takeB(0), 'btn small primary')), el('div', { class: 'bar' }, button('als äußeren Ring übernehmen', () => takeB(1), 'btn small primary')),
+      el('p', { class: 'muted', style: 'font-size:12.5px;margin:8px 0 0' }, 'Die Marker unter dem Schirm im 2D-Aufbau auf gegenüberliegende Stellen eines Rings ziehen.'));
+    function setSetup(v) { SB.setup = v; gB.hidden = v !== 'br'; for (const g of [gQ, gS, gM]) g.hidden = v === 'br'; if (v === 'br') { S.rate0 = S.rate; } hostRef?.refresh(); }
+    controls.append(gV, gB, gQ, gS, gM);
+    for (const g of [gQ, gS, gM]) g.hidden = true;
+    const rowsB = [];
+    const tblB = dataTable([
+      { key: 'U', label: 'U in kV', fmt: v => fmt(v / 1000, 1) }, { key: 'ring', label: 'Ring', fmt: v => v ? 'außen (123 pm)' : 'innen (213 pm)' }, { key: 'D', label: 'D in cm', digits: 2 },
+      { key: 'lam', label: 'λ aus dem Ring in pm', digits: 1 }, { key: 'lamDB', label: 'λ = h/p in pm', digits: 1 }
+    ], { onDelete: i => { rowsB.splice(i, 1); redrawB(); } });
+    const figB = el('div', { class: 'fig' }), resB = el('div', { class: 'result' }); const chB = new Chart(figB, { xlabel: '1/√U in 1/√V', ylabel: 'λ in pm' });
+    messwerte.append(el('h3', { style: 'margin:0 0 10px' }, 'Elektronenbeugungsröhre'),
+      el('div', { class: 'chartbox' }, el('h4', {}, 'λ aus den Ringen über 1/√U'), figB, resB,
+        csvTools(() => ({ meta: ['Elektronenbeugungsroehre, L = 0,135 m, d1 = 213 pm, d2 = 123 pm'], columns: [{ key: 'U', label: 'U in V' }, { key: 'ring', label: 'Ring (0 innen, 1 aussen)' }, { key: 'D', label: 'D in cm' }, { key: 'lam', label: 'lambda in pm' }], rows: rowsB }), 'elektronenbeugung_messreihe')),
+      el('div', { style: 'height:10px' }), tblB, el('h3', { style: 'margin:22px 0 10px' }, 'Doppelspalt'));
+    function redrawB() {
+      tblB.render(rowsB);
+      const pts = rowsB.map(r => [1 / Math.sqrt(r.U), r.lam]); const f = pts.length >= 2 ? fit.propFit(pts.map(p => p[0]), pts.map(p => p[1])) : null;
+      chB.set([{ color: '#7fd6a0', mode: 'dot', points: rowsB.filter(r => !r.ring).map(r => [1 / Math.sqrt(r.U), r.lam]), name: 'innen' }, { color: '#ab93ff', mode: 'dot', points: rowsB.filter(r => r.ring).map(r => [1 / Math.sqrt(r.U), r.lam]), name: 'außen' }], f ? [{ f: f.f, color: '#ffd27a' }] : []);
+      resB.innerHTML = f ? `<div><span>Steigung = h/√(2·m·e)</span><br><b>h = ${fmt(f.a * 1e-12 * Math.sqrt(2 * ME * QE) * 1e34, 2)}·10⁻³⁴ J·s</b> <span>· R² = ${fmt(f.r2, 4)}</span></div>` : '<span>Ringdurchmesser bei mehreren Spannungen messen.</span>';
+    }
+    redrawB();
+    function takeB(k) {
+      const D = Math.abs(SB.m2 - SB.m1); if (D < 0.2) { toast('Erst die Marker auf den Ring legen.'); return; }
+      const Rm = D / 200, lam = 2 * DG[k] * Math.sin(0.5 * Math.atan(Rm / LB)) * 1e12;
+      rowsB.push({ U: SB.U, ring: k, D, lam, lamDB: lamOf(SB.U) * 1e12 }); redrawB();
+      toast(`Übernommen: D = ${fmt(D, 2)} cm → λ = ${fmt(lam, 1)} pm (h/p: ${fmt(lamOf(SB.U) * 1e12, 1)} pm)`);
+    }
 
     const rows = [];
     const tbl = dataTable([
@@ -293,16 +389,71 @@ export default {
       return { destroy() { off(); lab.dispose(); } };
     }
 
-    const host = viewHost(stage, { id: 'elektronen-doppelspalt', views: { '2d': view2d, '3d': view3d }, initial: '2d', modelInfo: 'Wahrscheinlichkeitswelle ψ, Welcher-Weg' });
+    async function view2dB(box, MM) {
+      box.insertAdjacentHTML('beforeend', svgB());
+      const svg = box.querySelector('svg'), q = id => svg.querySelector('#' + id), cv = svg.querySelector('#bCv');
+      const CXs = 260, PXC = 220 / (SCR_R * 100), Xc = cm => CXs + cm * PXC;           // Pixel je cm auf dem Schirm
+      { let h = ''; for (let mm = -60; mm <= 60; mm += 2) { const x = Xc(mm / 10); const maj = mm % 10 === 0; h += `<rect x="${(x - 0.5).toFixed(1)}" y="494" width="1" height="${maj ? 12 : 6}" fill="#111"/>`; if (maj) h += `<text x="${x.toFixed(1)}" y="528" text-anchor="middle">${mm / 10}</text>`; } q('bRuler').innerHTML = h; }
+      { let h = ''; const a = 26, ox = 720, oy = 450; for (let i = -3; i <= 3; i++) for (let j = -2; j <= 2; j++) { const cx = ox + i * a * 1.5, cy = oy + j * a * Math.sqrt(3) + (i % 2 ? a * Math.sqrt(3) / 2 : 0); let d = ''; for (let k = 0; k <= 6; k++) { const an = k * Math.PI / 3; d += `${k ? 'L' : 'M'}${(cx + a * 0.5 * Math.cos(an) * 1.15).toFixed(1)} ${(cy + a * 0.5 * Math.sin(an) * 1.15).toFixed(1)}`; } h += `<path d="${d}"/>`; }
+        h += `<line x1="600" y1="400" x2="900" y2="400" stroke="#7fd6a0" stroke-width="2"/><line x1="600" y1="${400 + a * Math.sqrt(3) * 0.5 * 1.15 * 1.5}" x2="900" y2="${400 + a * Math.sqrt(3) * 0.5 * 1.15 * 1.5}" stroke="#7fd6a0" stroke-width="2"/><text x="905" y="412" fill="#7fd6a0" font-size="12">d₁ = 213 pm</text>`;
+        h += `<line x1="640" y1="520" x2="820" y2="370" stroke="#ab93ff" stroke-width="2"/><line x1="670" y1="534" x2="850" y2="384" stroke="#ab93ff" stroke-width="2"/><text x="855" y="380" fill="#ab93ff" font-size="12">d₂ = 123 pm</text>`; q('bHex').innerHTML = h; }
+      let drag = null;
+      for (const id of ['bM1', 'bM2']) q(id).addEventListener('pointerdown', e => { drag = id; svg.setPointerCapture(e.pointerId); e.preventDefault(); });
+      svg.addEventListener('pointermove', e => { if (!drag) return; const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; const c = p.matrixTransform(svg.getScreenCTM().inverse()); SB[drag === 'bM1' ? 'm1' : 'm2'] = Math.round(Math.max(-6.4, Math.min(6.4, (c.x - CXs) / PXC)) * 50) / 50; });
+      svg.addEventListener('pointerup', () => { drag = null; });
+      let raf = 0, key = '';
+      function frame() {
+        raf = requestAnimationFrame(frame);
+        const model = MM.model, k = `${SB.U}|${model}`;
+        if (k !== key) { key = k; drawScreen(cv, SB.U, model); }
+        q('bM1').setAttribute('transform', `translate(${Xc(SB.m1).toFixed(1)} 0)`); q('bM2').setAttribute('transform', `translate(${Xc(SB.m2).toFixed(1)} 0)`);
+        q('bD').textContent = `D = ${fmt(Math.abs(SB.m2 - SB.m1), 2)} cm`;
+        q('bUT').textContent = `U = ${fmt(SB.U / 1000, 1)} kV   λ = ${fmt(lamOf(SB.U) * 1e12, 1)} pm`;
+        q('bCones').setAttribute('opacity', model ? 1 : 0); q('bLat').setAttribute('opacity', model ? 1 : 0); q('bInfo').textContent = model ? '' : 'Raum abdunkeln. Die Ringe werden mit wachsender Spannung kleiner.';
+        if (model) { let h = ''; DG.slice(0, 2).forEach(d => { const r = ringR(SB.U, d), y = Math.min(78, r / SCR_R * 78); h += `<path d="M651 150 L915 ${150 - y} M651 150 L915 ${150 + y}"/>`; }); q('bCones').innerHTML = h; }
+      }
+      raf = requestAnimationFrame(frame);
+      return { destroy() { cancelAnimationFrame(raf); } };
+    }
+    async function view3dB(box, MM) {
+      const { createLab, mats, cable, powerSupply, glassMaterial } = await import('../js/lib/lab3d.js');
+      const lab = await createLab(box, { cam: [0.42, 0.24, 0.3], target: [0.04, 0.15, 0], table: [1.6, 1.2], bloom: [0.7, 0.4, 0.85], room: 0.15, minDist: 0.12, maxDist: 2, fov: 38 });
+      const { THREE, scene } = lab; const M = mats(THREE);
+      box.insertAdjacentHTML('beforeend', '<div class="hint">Drehen: ziehen · Zoom: Mausrad · Raum abgedunkelt</div>');
+      const Y = 0.16, XF = -0.05, glass = glassMaterial(THREE);
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.16, 24, 1, true), glass); neck.rotation.z = Math.PI / 2; neck.position.set(XF - 0.07, Y, 0); scene.add(neck);
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.075, 40, 28), glass); bulb.position.set(XF + LB - 0.075, Y, 0); scene.add(bulb);
+      const cath = new THREE.Mesh(new THREE.SphereGeometry(0.004, 12, 8), new THREE.MeshBasicMaterial({ color: 0xff8a3d, toneMapped: false })); cath.position.set(XF - 0.13, Y, 0); scene.add(cath);
+      const an = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.03, 20), M.steel); an.rotation.z = Math.PI / 2; an.position.set(XF - 0.015, Y, 0); scene.add(an);
+      const cv = document.createElement('canvas'); cv.width = cv.height = 256; const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+      const scr = new THREE.Mesh(new THREE.CircleGeometry(SCR_R, 48), new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false })); scr.rotation.y = Math.PI / 2; scr.position.set(XF + LB - 0.035, Y, 0); scr.scale.setScalar(0.96); scene.add(scr);
+      for (const x of [XF - 0.12, XF + 0.06]) { const st = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, Y - 0.02, 12), M.steel); st.position.set(x, (Y - 0.02) / 2, 0); scene.add(st); }
+      const ps = powerSupply(THREE, { label: 'Hochspannung 0 … 5 kV', displays: 2, knobs: 2 }); ps.position.set(-0.3, 0, -0.25); ps.rotation.y = 0.6; scene.add(ps);
+      scene.add(cable(THREE, ps.socketWorld(0), new THREE.Vector3(XF - 0.15, Y - 0.02, 0), 0xc4231b, 0.05), cable(THREE, ps.socketWorld(1), new THREE.Vector3(XF - 0.015, Y - 0.02, 0), 0x151515, 0.05));
+      const modelG = new THREE.Group(); scene.add(modelG);
+      const cones = [0, 1].map(k => { const m = new THREE.Mesh(new THREE.ConeGeometry(1, 1, 48, 1, true), new THREE.MeshBasicMaterial({ color: k ? 0xab93ff : 0x7fd6a0, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false, toneMapped: false })); m.rotation.z = Math.PI / 2; modelG.add(m); return m; });
+      let key = '';
+      const off = lab.onFrame(() => {
+        const k = `${SB.U}|${MM.model}`; if (k !== key) { key = k; drawScreen(cv, SB.U, false); tex.needsUpdate = true; }
+        ps.displays[0].draw(fmt(SB.U / 1000, 2), 'kV'); ps.displays[1].draw('250', 'mA');
+        modelG.visible = MM.model; if (!MM.model) return;
+        cones.forEach((c, i) => { const r = Math.min(SCR_R, ringR(SB.U, DG[i])); c.scale.set(r, LB, r); c.position.set(XF + LB / 2, Y, 0); });
+      });
+      return { destroy() { off(); lab.dispose(); } };
+    }
+
+    const host = viewHost(stage, { id: 'elektronen-doppelspalt', views: { '2d': (b, m) => SB.setup === 'br' ? view2dB(b, m) : view2d(b, m), '3d': (b, m) => SB.setup === 'br' ? view3dB(b, m) : view3d(b, m) }, initial: '2d', modelInfo: 'Beugung, Wahrscheinlichkeitswelle' });
+    hostRef = host;
 
     let raf = 0, last = performance.now(), acc = 0, slow = 0;
     function loop(now) {
       raf = requestAnimationFrame(loop);
       const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
+      if (SB.setup === 'br') { slow += dt; if (slow > 0.15) { slow = 0; dLB.set(`${fmt(lamOf(SB.U) * 1e12, 1)} pm`); dDB.set(`${fmt(Math.abs(SB.m2 - SB.m1), 2)} cm`); } return; }
       if (S.rate > 0 && S.hits.length < 30000) { acc += dt * S.rate; while (acc > 1) { acc -= 1; const h = hit(); if (h) S.hits.push(h); } } else acc = 0;
       slow += dt; if (slow > 0.15) { slow = 0; dLam.set(`${fmt(lamOf(S.U) * 1e12, 2)} pm`); const dx = Math.abs(S.m2 - S.m1); dDx.set(`${fmt(dx, 1)} mm`); dL2.set(`${fmt(dx / S.k * 1e-3 * G_SLIT / (V * A) * 1e12, 2)} pm`); drawHist(); }
     }
     raf = requestAnimationFrame(loop);
-    return { destroy() { cancelAnimationFrame(raf); host.destroy(); chL.destroy(); chP.destroy(); } };
+    return { destroy() { cancelAnimationFrame(raf); host.destroy(); chL.destroy(); chP.destroy(); chB.destroy(); } };
   }
 };

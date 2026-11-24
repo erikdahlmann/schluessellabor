@@ -10,9 +10,14 @@ import { viewHost } from '../js/lib/views.js';
 
 const HC = 1239.84;                                                   // h·c in keV·pm
 const ANODES = {
-  mo: { name: 'Molybdän (Mo)', Z: 42, ka: 71.08, kb: 63.09, edge: 20.0, wa: 1.0, wb: 0.28 },
-  cu: { name: 'Kupfer (Cu)', Z: 29, ka: 154.18, kb: 139.22, edge: 8.98, wa: 1.0, wb: 0.2 }
+  mo: { name: 'Molybdän (Mo)', sym: 'Mo', Z: 42, ka: 71.08, kb: 63.09, edge: 20.0, wa: 1.0, wb: 0.28, abs: 180, gain: 1 },
+  cu: { name: 'Kupfer (Cu)', sym: 'Cu', Z: 29, ka: 154.18, kb: 139.22, edge: 8.98, wa: 1.0, wb: 0.2, abs: 260, gain: 1.6 },
+  fe: { name: 'Eisen (Fe)', sym: 'Fe', Z: 26, ka: 193.73, kb: 175.66, edge: 7.11, wa: 1.0, wb: 0.18, abs: 280, gain: 1.4 },
+  ag: { name: 'Silber (Ag)', sym: 'Ag', Z: 47, ka: 56.08, kb: 49.70, edge: 25.51, wa: 1.0, wb: 0.3, abs: 160, gain: 0.9 }
 };
+// Filter vor dem Kristall: K-Kante λe, Transmission T = exp(−c·(λ/λe)³), oberhalb der Kante 7-mal schwächer
+const FILTERS = { none: { name: 'ohne Filter' }, zr: { name: 'Zr-Filter (für Mo)', le: 68.9, c: 4.43 }, ni: { name: 'Ni-Filter (für Cu)', le: 148.8, c: 4.36 } };
+const trans = (f, lam) => { const F = FILTERS[f]; if (!F.le) return 1; const x = (lam / F.le) ** 3 * F.c; return Math.exp(-(lam < F.le ? x : x / 7)); };
 const CRYST = { nacl: { name: 'NaCl', d: 282.0 }, lif: { name: 'LiF', d: 201.4 } };
 const REFL = [0, 1, 0.22, 0.05];                                      // Reflexionsvermögen 1., 2., 3. Ordnung
 const WID = 0.22 * Math.PI / 180;                                     // Linienbreite im Winkel (Divergenz, Mosaik)
@@ -34,7 +39,7 @@ const svgMarkup = () => `
 <path d="M160 278 L176 322 L188 322 L172 278z" fill="#b8692f" id="xAnode"/>
 <text x="130" y="370" fill="#8e979d" font-size="11" text-anchor="middle">Röntgenröhre</text>
 <text id="xAnT" x="130" y="384" fill="#c9c3ba" font-size="11" text-anchor="middle"></text>
-<rect x="232" y="286" width="10" height="11" fill="#6a7178"/><rect x="232" y="303" width="10" height="11" fill="#6a7178"/><text x="237" y="332" fill="#8e979d" font-size="10" text-anchor="middle">Blende</text>
+<rect id="xFilt" x="252" y="292" width="4" height="16" fill="#b9bec2" opacity="0"/><text id="xFiltT" x="254" y="282" fill="#c9c3ba" font-size="10" text-anchor="middle"></text><rect x="232" y="286" width="10" height="11" fill="#6a7178"/><rect x="232" y="303" width="10" height="11" fill="#6a7178"/><text x="237" y="332" fill="#8e979d" font-size="10" text-anchor="middle">Blende</text>
 <!-- Strahlen (nur Modell sichtbar) -->
 <g id="xBeams" opacity="0">
   <line x1="178" y1="300" x2="380" y2="300" stroke="#c7b6ff" stroke-width="3" opacity=".5" filter="url(#xGl)"/>
@@ -82,7 +87,7 @@ export default {
   docs: {
     durchfuehrung: `
 <h3>Aufbau</h3>
-<p>Das Röntgengerät hat ein Gehäuse mit Bleiglasscheibe. Die Röhre beschleunigt Elektronen mit der Anodenspannung U auf eine Anode aus Molybdän oder Kupfer. Eine Blende formt einen schmalen Strahl. Er trifft im Goniometer auf einen Kristall (NaCl oder LiF). Das Zählrohr steht immer unter dem doppelten Kristallwinkel (θ-2θ-Kopplung).</p>
+<p>Das Röntgengerät hat ein Gehäuse mit Bleiglasscheibe. Die Röhre beschleunigt Elektronen mit der Anodenspannung U auf eine Anode aus Molybdän, Kupfer, Eisen oder Silber. Vor den Kristall kann ein Zr- oder Ni-Filter gesetzt werden. Eine Blende formt einen schmalen Strahl. Er trifft im Goniometer auf einen Kristall (NaCl oder LiF). Das Zählrohr steht immer unter dem doppelten Kristallwinkel (θ-2θ-Kopplung).</p>
 <h3>Durchführung</h3>
 <ol>
 <li>Anode, Kristall und U wählen. <b>Messung starten</b>: Kristall und Zählrohr fahren den Winkelbereich ab, die Zählrate wird aufgezeichnet (im Zeitraffer).</li>
@@ -90,6 +95,8 @@ export default {
 <li>Für mehrere Spannungen wiederholen und daraus h bestimmen.</li>
 <li>Den Marker auf die Linien setzen und <b>Linie übernehmen</b>. Mit der Tabelle das Anodenmaterial bestätigen.</li>
 <li>Unter 20 kV (Mo) bzw. 9 kV (Cu) messen: Wo bleiben die Linien?</li>
+<li>Zr-Filter in den Strahl der Mo-Anode bringen und das Spektrum vergleichen: Was passiert mit Kα und Kβ?</li>
+<li>Die Kα-Linien von Fe, Cu, Mo und Ag (35 kV) vermessen und die Moseley-Gerade zeichnen.</li>
 </ol>
 <div class="callout">Strahlenschutz: Das Gerät ist ein Vollschutzgerät. Die Röhre lässt sich nur bei geschlossener Tür einschalten.</div>`,
     theorie: `
@@ -102,12 +109,19 @@ export default {
 <p>Trägt man λ<sub>min</sub> über <span class="tex">\\frac{1}{U}</span> auf, ergibt sich eine Ursprungsgerade mit der Steigung <span class="tex">\\frac{h\\, c}{e}</span>.</p>
 <h3>Charakteristische Linien</h3>
 <p>Schlägt ein Elektron ein Elektron aus der innersten Schale (K) der Anodenatome, rückt ein Elektron aus einer höheren Schale nach. Die Energiedifferenz wird als Photon frei: Kα beim Übergang L → K, Kβ bei M → K. Die Linien entstehen erst, wenn e·U die Bindungsenergie der K-Schale übersteigt (Mo: 20,0 keV, Cu: 8,98 keV).</p>
+<h3>Filter</h3>
+<p>Ein dünnes Metallblech im Strahl schwächt Röntgenstrahlung kurz unterhalb seiner K-Kante sehr stark, kurz oberhalb viel weniger. Ein Zirkonfilter (Kante bei 68,9 pm) lässt von Mo vor allem die Kα-Linie (71 pm) durch und schluckt Kβ (63 pm). Für Cu leistet ein Nickelfilter dasselbe. So erhält man fast einfarbige Strahlung.</p>
+<h3>Moseley-Gesetz</h3>
+<p>Die Frequenz der Kα-Linie wächst mit dem Quadrat der Ordnungszahl. Das andere Elektron auf der K-Schale schirmt etwa eine Kernladung ab:</p>
+<span class="formula tex">f_{K\\alpha} = \\tfrac34\\, f_R\\, (Z - 1)^2 \\quad\\Rightarrow\\quad \\sqrt{f} = \\sqrt{\\tfrac34 f_R}\\,(Z - 1)</span>
+<p>Mit f_R = 3,29·10¹⁵ Hz. Trägt man √f über Z auf, ergibt sich eine Gerade. Moseley ordnete so das Periodensystem nach der Kernladungszahl.</p>
 <h3>Modellgrenzen</h3>
 <ul><li>Das Bremsspektrum folgt der Kramers-Formel, die Absorption im Fenster ist vereinfacht. Kα₁ und Kα₂ erscheinen als eine Linie.</li><li>Die Zählrate schwankt nach Poisson. Die Messung läuft im Zeitraffer.</li></ul>
 <h3>Was die Modellansicht zeigt</h3><ul><li>Den Röntgenstrahl (im echten Versuch unsichtbar), reflektiert in Richtung 2θ.</li><li>Rechts oben die Netzebenen mit zwei Strahlen und ihrem Gangunterschied 2·d·sin θ für die Wellenlänge am Marker.</li><li>Rechts unten die Schalen K, L, M der Anodenatome: Übergänge Kα und Kβ, und ein Elektron, das im Feld eines Kerns abgebremst wird (Bremsstrahlung).</li></ul>`,
     geraet: `
 <table class="spec"><tbody>
-<tr><td>Röntgenröhre</td><td>Mo- oder Cu-Anode, U = 10 … 35 kV, I = 0,1 … 1 mA</td></tr>
+<tr><td>Röntgenröhre</td><td>Anoden Mo, Cu, Fe, Ag (wechselbar), U = 10 … 35 kV, I = 0,1 … 1 mA</td></tr>
+<tr><td>Filter</td><td>Zirkon (K-Kante 68,9 pm) für Mo, Nickel (148,8 pm) für Cu</td></tr>
 <tr><td>Kristalle</td><td>NaCl (d = 282,0 pm), LiF (d = 201,4 pm)</td></tr>
 <tr><td>Goniometer</td><td>θ-2θ-Kopplung, θ = 2° … 35°</td></tr>
 <tr><td>Detektor</td><td>Geiger-Müller-Zählrohr mit Torzeit</td></tr>
@@ -127,36 +141,37 @@ export default {
 
   async mount({ stage, controls, messwerte, ui, Chart, csvTools, fit }) {
     const { el, group, slider, segmented, check, button, fmt, dataTable, toast, display, gauss } = ui;
-    const S = { an: 'mo', cr: 'nacl', U: 35, I: 1, on: true, theta: 4, mark: 7.2, n: 1, scan: null, from: 2.5, to: 30, gate: 1, curves: [], cur: [], R: 0, ver: 0 };
+    const S = { filt: 'none', an: 'mo', cr: 'nacl', U: 35, I: 1, on: true, theta: 4, mark: 7.2, n: 1, scan: null, from: 2.5, to: 30, gate: 1, curves: [], cur: [], R: 0, ver: 0 };
     const A = () => ANODES[S.an], d = () => CRYST[S.cr].d;
     // spektrale Intensität (beliebige Einheiten) bei λ in pm
     function spec(lam) {
       const a = A(), lmin = HC / S.U; if (lam <= lmin) return 0;
-      let I = 0.006 * a.Z * (lam / lmin - 1) / (lam * lam) * 1e4 * Math.exp(-((lam / (S.an === 'mo' ? 180 : 260)) ** 3)) * Math.exp(-0.002 * lam);
-      return I;
+      let I = 0.006 * a.Z * (lam / lmin - 1) / (lam * lam) * 1e4 * Math.exp(-((lam / a.abs) ** 3)) * Math.exp(-0.002 * lam);
+      return I * trans(S.filt, lam);
     }
     function rate(thDeg) {
       if (!S.on) return 0;
       const th = thDeg * Math.PI / 180, a = A(); let R = 0;
       for (let n = 1; n <= 3; n++) {
         const lam = 2 * d() * Math.sin(th) / n; R += REFL[n] * spec(lam) * 2 * d() * Math.cos(th) / n * 0.032;
-        if (S.U > a.edge) for (const [l, w] of [[a.ka, a.wa], [a.kb, a.wb]]) { const s = n * l / (2 * d()); if (s >= 1) continue; const thL = Math.asin(s); R += REFL[n] * w * 0.9 * (S.U / a.edge - 1) ** 1.5 * 160 * Math.exp(-0.5 * ((th - thL) / WID) ** 2); }
+        if (S.U > a.edge) for (const [l, w] of [[a.ka, a.wa], [a.kb, a.wb]]) { const s = n * l / (2 * d()); if (s >= 1) continue; const thL = Math.asin(s); R += REFL[n] * w * trans(S.filt, l) * 0.9 * (S.U / a.edge - 1) ** 1.5 * 160 * Math.exp(-0.5 * ((th - thL) / WID) ** 2); }
       }
-      return (R * 55 + 4) * S.I * (S.an === 'cu' ? 1.6 : 1);
+      return (R * 55 + 4) * S.I * a.gain;
     }
 
     const gR = group('Röntgenröhre', { led: true }); gR.led(true);
     const cOn = check({ label: 'Hochspannung eingeschaltet', checked: true, onChange: v => { S.on = v; gR.led(v); } });
-    const segA = segmented({ value: 'mo', options: [{ value: 'mo', label: 'Mo-Anode' }, { value: 'cu', label: 'Cu-Anode' }], onChange: v => { S.an = v; S.ver++; } });
+    const segA = segmented({ value: 'mo', options: Object.entries(ANODES).map(([k, a]) => ({ value: k, label: `${a.sym}-Anode` })), onChange: v => { S.an = v; S.ver++; } });
+    const segF = segmented({ value: 'none', options: [{ value: 'none', label: 'ohne Filter' }, { value: 'zr', label: 'Zr (für Mo)' }, { value: 'ni', label: 'Ni (für Cu)' }], onChange: v => { S.filt = v; S.ver++; } });
     const sU = slider({ label: 'Anodenspannung U', min: 10, max: 35, step: 0.5, value: S.U, unit: 'kV', digits: 1, onInput: v => { S.U = v; } });
     const sI = slider({ label: 'Emissionsstrom I', min: 0.1, max: 1, step: 0.05, value: S.I, unit: 'mA', digits: 2, onInput: v => { S.I = v; } });
-    gR.append(cOn, el('div', { class: 'ctl' }, el('div', { style: 'grid-column:1/-1' }, segA)), sU, sI);
+    gR.append(cOn, el('div', { class: 'ctl' }, el('div', { style: 'grid-column:1/-1' }, segA)), el('div', { class: 'ctl' }, el('label', { style: 'grid-column:1/-1' }, 'Filter im Strahl'), el('div', { style: 'grid-column:1/-1' }, segF)), sU, sI);
     const gG = group('Goniometer');
     const segC = segmented({ value: 'nacl', options: [{ value: 'nacl', label: 'NaCl' }, { value: 'lif', label: 'LiF' }], onChange: v => { S.cr = v; S.ver++; } });
     const sTh = slider({ label: 'Kristallwinkel θ (von Hand)', min: 2, max: 35, step: 0.1, value: S.theta, unit: '°', digits: 1, onInput: v => { if (!S.scan) S.theta = v; } });
     const sFrom = slider({ label: 'Messbereich: von', min: 2, max: 20, step: 0.5, value: S.from, unit: '°', digits: 1, onInput: v => { S.from = v; } });
     const sTo = slider({ label: 'bis', min: 8, max: 35, step: 0.5, value: S.to, unit: '°', digits: 1, onInput: v => { S.to = v; } });
-    const bScan = button('Messung starten', () => { if (S.scan) { stopScan(); return; } if (!S.on) { toast('Die Hochspannung ist aus.'); return; } S.scan = { th: S.from, pts: [], U: S.U, an: S.an, cr: S.cr }; S.cur = S.scan.pts; bScan.textContent = 'Messung stoppen'; }, 'btn small primary');
+    const bScan = button('Messung starten', () => { if (S.scan) { stopScan(); return; } if (!S.on) { toast('Die Hochspannung ist aus.'); return; } S.scan = { th: S.from, pts: [], U: S.U, an: S.an, cr: S.cr, f: S.filt }; S.cur = S.scan.pts; bScan.textContent = 'Messung stoppen'; }, 'btn small primary');
     gG.append(el('div', { class: 'ctl' }, el('label', { style: 'grid-column:1/-1' }, 'Kristall'), el('div', { style: 'grid-column:1/-1' }, segC)), sTh, sFrom, sTo, el('div', { class: 'bar' }, bScan, button('Spektren löschen', () => { S.curves.length = 0; S.cur = []; drawSpec(); })),
       el('p', { class: 'muted', style: 'font-size:12.5px;margin:8px 0 0' }, 'Schrittweite 0,1°, Torzeit 1 s, im Zeitraffer.'));
     const gM = group('Auswertung mit dem Winkel-Marker');
@@ -176,17 +191,20 @@ export default {
     ], { onDelete: i => { rows.splice(i, 1); redraw(); } });
     const figS = el('div', { class: 'fig' }), figH = el('div', { class: 'fig' });
     const chS = new Chart(figS, { xlabel: 'θ in °', ylabel: 'R in 1/s', ymin: 0 }), chH = new Chart(figH, { xlabel: '1/U in 1/kV', ylabel: 'λ_min in pm' });
+    const figMo = el('div', { class: 'fig' }), resMo = el('div', { class: 'result' }); const chMo = new Chart(figMo, { xlabel: 'Ordnungszahl Z', ylabel: '√f in 10⁸ √Hz', includeZero: true });
     const resH = el('div', { class: 'result' }), resLn = el('div', { class: 'result' });
     messwerte.append(
       el('div', { class: 'data' },
         el('div', { class: 'chartbox' }, el('h4', {}, 'Aufgenommene Spektren'), figS, resLn,
           csvTools(() => ({ meta: ['Röntgenspektren', 'letzte Messung: theta in Grad, R in 1/s'], columns: [{ key: 'th', label: 'theta in Grad' }, { key: 'R', label: 'R in 1/s' }], rows: (S.curves[S.curves.length - 1]?.pts || []).map(([th, R]) => ({ th, R })) }), 'roentgen_spektrum')),
         el('div', { class: 'chartbox' }, el('h4', {}, 'Duane-Hunt: λ_min über 1/U'), figH, resH)),
+      el('div', { style: 'height:14px' }),
+      el('div', { class: 'chartbox' }, el('h4', {}, 'Moseley-Gerade: √f der Kα-Linie über Z'), figMo, resMo),
       el('div', { style: 'height:14px' }), tbl,
       el('div', { style: 'margin-top:8px' }, csvTools(() => ({ meta: ['Röntgen – Auswertung'], columns: [{ key: 'kind', label: 'Art' }, { key: 'an', label: 'Anode' }, { key: 'cr', label: 'Kristall' }, { key: 'U', label: 'U in kV' }, { key: 'n', label: 'n' }, { key: 'th', label: 'theta in Grad' }, { key: 'lam', label: 'lambda in pm' }, { key: 'E', label: 'E in keV' }], rows }), 'roentgen_auswertung')));
     const colU = U => `hsl(${30 + (35 - U) * 9},80%,62%)`;
     function drawSpec() {
-      const series = S.curves.map(c => ({ name: `${c.an === 'mo' ? 'Mo' : 'Cu'} ${CRYST[c.cr].name} ${fmt(c.U, 1)} kV`, color: colU(c.U), points: c.pts }));
+      const series = S.curves.map(c => ({ name: `${ANODES[c.an].sym} ${CRYST[c.cr].name} ${fmt(c.U, 1)} kV${c.f && c.f !== 'none' ? ' ' + (c.f === 'zr' ? 'Zr' : 'Ni') : ''}`, color: colU(c.U), points: c.pts }));
       if (S.scan) series.push({ color: '#ffffff', points: S.scan.pts });
       chS.set(series);
     }
@@ -195,12 +213,16 @@ export default {
       const g = rows.filter(r => r.kind === 'Grenze').map(r => [1 / r.U, r.lam]); const fits = []; let t = '<span>Grenzwinkel für mindestens zwei Spannungen übernehmen.</span>';
       if (new Set(rows.filter(r => r.kind === 'Grenze').map(r => r.U)).size >= 2) { const f = fit.propFit(g.map(p => p[0]), g.map(p => p[1])); if (f) { fits.push({ f: f.f, color: '#ab93ff' }); const h = f.a * 1e-12 * 1000 * 1.602e-19 / 2.998e8; t = `<div><span>Steigung = h·c/e = ${fmt(f.a, 0)} pm·kV</span><br><b>h = ${fmt(h / 1e-34, 2)}·10⁻³⁴ J·s</b> <span>· Tabelle 6,63·10⁻³⁴ J·s</span></div>`; } }
       chH.set([{ color: '#ffb347', mode: 'dot', points: g }], fits); resH.innerHTML = t;
+      { const ka = rows.filter(r => r.kind === 'Linie' && r.Z && Math.abs(r.lam - Object.values(ANODES).find(a => a.Z === r.Z).ka) / r.lam < 0.04);
+        const pts = ka.map(r => [r.Z, Math.sqrt(2.998e8 / (r.lam * 1e-12)) / 1e8]); let tm = '<span>Kα-Linien von mindestens zwei Anoden als „Linie“ übernehmen.</span>'; const fm = [];
+        if (new Set(ka.map(r => r.Z)).size >= 2) { const f = fit.linFit(pts.map(p => p[0]), pts.map(p => p[1])); if (f) { fm.push({ f: f.f, color: '#ab93ff' }); tm = `<div><span>√f = a·(Z − σ)</span><br><b>Abschirmzahl σ = ${fmt(-f.b / f.a, 2)}</b> <span>(Moseley: σ ≈ 1; mit echten Linien etwas größer)</span></div><div><span>Steigung</span><br><b>${fmt(f.a, 3)}·10⁸ √Hz</b> <span>(Theorie √(3/4·f_R) = 0,497·10⁸ √Hz)</span></div>`; } }
+        chMo.set([{ color: '#ffd27a', mode: 'dot', points: pts }], fm); resMo.innerHTML = tm; }
       const ls = rows.filter(r => r.kind === 'Linie');
-      resLn.innerHTML = ls.length ? ls.map(r => { let best = null; for (const [k, a] of Object.entries(ANODES)) for (const [nm, l] of [['Kα', a.ka], ['Kβ', a.kb]]) { const dd = Math.abs(l - r.lam); if (!best || dd < best.dd) best = { dd, k, nm, l }; } return `<div><span>${fmt(r.lam, 1)} pm →</span> <b>${best.k === 'mo' ? 'Mo' : 'Cu'} ${best.nm} (${fmt(best.l, 1)} pm)</b></div>`; }).join('') : '<span>Linien mit dem Marker vermessen und übernehmen.</span>';
+      resLn.innerHTML = ls.length ? ls.map(r => { let best = null; for (const [k, a] of Object.entries(ANODES)) for (const [nm, l] of [['Kα', a.ka], ['Kβ', a.kb]]) { const dd = Math.abs(l - r.lam); if (!best || dd < best.dd) best = { dd, k, nm, l }; } return `<div><span>${fmt(r.lam, 1)} pm →</span> <b>${ANODES[best.k].sym} ${best.nm} (${fmt(best.l, 1)} pm)</b></div>`; }).join('') : '<span>Linien mit dem Marker vermessen und übernehmen.</span>';
     }
     redraw();
     function take(kind) {
-      const lam = lamM(); rows.push({ kind, an: S.an === 'mo' ? 'Mo' : 'Cu', cr: CRYST[S.cr].name, U: S.U, n: S.n, th: S.mark, lam, E: HC / lam }); redraw();
+      const lam = lamM(); rows.push({ kind, Z: A().Z, an: A().sym, cr: CRYST[S.cr].name, U: S.U, n: S.n, th: S.mark, lam, E: HC / lam }); redraw();
       toast(`Übernommen: λ = ${fmt(lam, 1)} pm, E = ${fmt(HC / lam, 2)} keV`);
     }
     function stopScan() { if (S.scan && S.scan.pts.length > 10) { S.curves.push(S.scan); if (S.curves.length > 6) S.curves.shift(); } S.scan = null; bScan.textContent = 'Messung starten'; drawSpec(); }
@@ -218,7 +240,7 @@ export default {
         const r1 = 60, r2 = 110;
         q('xArc1').setAttribute('d', `M${380 + r1} 300 A${r1} ${r1} 0 0 0 ${(380 + r1 * Math.cos(thr)).toFixed(1)} ${(300 - r1 * Math.sin(thr)).toFixed(1)}`); q('xArcT1').setAttribute('x', 380 + r1 + 6); q('xArcT1').setAttribute('y', 296); q('xArcT1').textContent = `θ = ${fmt(th, 1)}°`;
         q('xArc2').setAttribute('d', `M${380 + r2} 300 A${r2} ${r2} 0 0 0 ${(380 + r2 * Math.cos(2 * thr)).toFixed(1)} ${(300 - r2 * Math.sin(2 * thr)).toFixed(1)}`); q('xArcT2').setAttribute('x', 380 + r2 * Math.cos(2 * thr) + 8); q('xArcT2').setAttribute('y', 300 - r2 * Math.sin(2 * thr) - 6); q('xArcT2').textContent = '2θ';
-        q('xCath').setAttribute('opacity', S.on ? 1 : 0.3); q('xAnT').textContent = A().name; q('xCryT').textContent = `Kristall ${CRYST[S.cr].name}, d = ${fmt(d(), 1)} pm`;
+        q('xCath').setAttribute('opacity', S.on ? 1 : 0.3); q('xAnT').textContent = A().name; q('xFilt').setAttribute('opacity', S.filt === 'none' ? 0 : 1); q('xFiltT').textContent = S.filt === 'none' ? '' : (S.filt === 'zr' ? 'Zr' : 'Ni'); q('xCryT').textContent = `Kristall ${CRYST[S.cr].name}, d = ${fmt(d(), 1)} pm`;
         const R = S.R;
         q('xBeams').setAttribute('opacity', model && S.on ? 1 : 0);
         q('xRef').setAttribute('x2', (380 + 200 * Math.cos(2 * thr)).toFixed(1)); q('xRef').setAttribute('y2', (300 - 200 * Math.sin(2 * thr)).toFixed(1)); q('xRef').setAttribute('opacity', Math.min(1, 0.15 + R / 600).toFixed(2));
@@ -333,6 +355,6 @@ export default {
       slow += dt; if (slow > 0.15) { slow = 0; dL.set(`${fmt(lamM(), 1)} pm`); dE.set(`${fmt(HC / lamM(), 2)} keV`); }
     }
     raf = requestAnimationFrame(loop);
-    return { destroy() { cancelAnimationFrame(raf); host.destroy(); chS.destroy(); chH.destroy(); } };
+    return { destroy() { cancelAnimationFrame(raf); host.destroy(); chS.destroy(); chH.destroy(); chMo.destroy(); } };
   }
 };

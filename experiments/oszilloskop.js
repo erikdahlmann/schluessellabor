@@ -35,6 +35,7 @@ const svgMarkup = () => `
 <g id="oGrid" stroke="#173328"></g>
 <path id="oT1" fill="none" stroke="#7dffb8" stroke-width="2" filter="url(#oGl)"/>
 <path id="oT2" fill="none" stroke="#ffd65a" stroke-width="2" filter="url(#oGl)"/>
+<g id="oDots"></g>
 <circle id="oSpot" r="4" fill="#e6fff0" filter="url(#oGl)" opacity="0"/>
 <g id="oCur">
   <line id="oCu1" x1="40" x2="520" stroke="#ff9a7a" stroke-width="1.3" stroke-dasharray="6 4"/><line id="oCu2" x1="40" x2="520" stroke="#ff9a7a" stroke-width="1.3" stroke-dasharray="6 4"/>
@@ -58,6 +59,7 @@ const svgMarkup = () => `
   <path d="M600 230 H660"/><rect x="660" y="222" width="60" height="16" fill="#f4efe3"/><path d="M720 230 H820 V246"/><path d="M806 250 H834 M806 258 H834"/><path d="M820 262 V286 H600"/>
 </g>
 <text x="690" y="216" fill="#333" font-size="12" text-anchor="middle">R = 1 kΩ</text><text x="842" y="258" fill="#333" font-size="12">C = 1 µF</text>
+<text id="oG2" x="956" y="196" fill="#b8860b" font-size="11" text-anchor="end"></text>
 <circle cx="600" cy="230" r="5" fill="#2f9e6a"/><text x="590" y="222" fill="#2f9e6a" font-size="12" text-anchor="end">CH1</text>
 <circle id="oC2dot" cx="780" cy="230" r="5" fill="#d4a017"/><text id="oC2lab" x="780" y="222" fill="#b8860b" font-size="12" text-anchor="middle">CH2</text>
 <text x="956" y="280" fill="#555" font-size="11" text-anchor="end">Grenzfrequenz</text><text x="956" y="296" fill="#555" font-size="11" text-anchor="end">f_g = 1/(2πRC) ≈ 159 Hz</text>
@@ -97,6 +99,8 @@ export default {
 <li>Im 2D-Aufbau die blauen Cursor auf eine Periode legen, die roten auf Maximum und Minimum. <b>Periode und Amplitude übernehmen.</b> Für mehrere Frequenzen wiederholen und f = 1/T mit der Anzeige des Generators vergleichen.</li>
 <li>Kanal 2 einschalten. Für Frequenzen zwischen 20 Hz und 2 kHz jeweils die Amplitude an beiden Kanälen messen (Cursor erst auf CH1, dann auf CH2) und mit den blauen Cursorn den zeitlichen Abstand zweier Nulldurchgänge. <b>Phasenverschiebung übernehmen.</b></li>
 <li>Im XY-Betrieb die Lissajous-Figur betrachten. Wie ändert sie sich mit der Frequenz?</li>
+<li>CH2 an Generator 2 legen, XY-Betrieb. f₂ so einstellen, dass die Figur steht. Aus der Zahl der Berührpunkte am Rand das Frequenzverhältnis bestimmen.</li>
+<li>Auf „Messwerterfassung“ umschalten. Die Abtastrate verkleinern, bis die angezeigte Kurve nicht mehr stimmt. Bei welcher Abtastrate passiert das? Ein Bild als CSV speichern.</li>
 </ol>`,
     theorie: `
 <h3>Braunsche Röhre</h3>
@@ -111,6 +115,10 @@ export default {
 <p>Am Kondensator kommt bei hohen Frequenzen weniger Spannung an, und sie läuft der Eingangsspannung hinterher:</p>
 <span class="formula tex">\\frac{\\hat{U}_C}{\\hat{U}} = \\frac{1}{\\sqrt{1 + (2\\pi f R C)^2}} \\qquad \\tan\\varphi = 2\\pi f R C \\qquad \\varphi = 360^\\circ \\cdot \\frac{\\Delta t}{T}</span>
 <p>Bei der Grenzfrequenz f_g = 1/(2πRC) ist das Verhältnis 1/√2 ≈ 0,71 und die Phasenverschiebung 45°.</p>
+<h3>Effektivwert</h3>
+<p>Der Effektivwert ist die Gleichspannung, die in einem Widerstand dieselbe Leistung umsetzt. Für Sinus gilt U_eff = Û/√2, für Rechteck U_eff = Û, für Dreieck U_eff = Û/√3. Messgeräte für Wechselspannung zeigen den Effektivwert.</p>
+<h3>Lissajous-Figuren</h3>
+<p>Im XY-Betrieb lenkt CH1 den Strahl waagerecht und CH2 senkrecht ab. Zwei Sinusspannungen mit dem Frequenzverhältnis f_y : f_x = p : q ergeben eine stehende Figur. Sie berührt den oberen Rand p-mal und den seitlichen Rand q-mal.</p>
 <h3>Messwerterfassungssystem</h3>
 <p>Ein Messwerterfassungssystem tastet die Spannung in festen Zeitabständen ab und speichert die Werte. Es arbeitet wie ein Speicheroszilloskop. Die Abtastrate muss mindestens doppelt so groß sein wie die höchste Frequenz im Signal.</p>
 <h3>Modellgrenzen</h3>
@@ -133,13 +141,14 @@ export default {
   async mount({ stage, controls, messwerte, ui, Chart, csvTools, fit }) {
     const { el, group, slider, segmented, selectBox, button, fmt, dataTable, toast, display } = ui;
     const S = { wave: 'sin', rng: 100, fine: 2, U: 4, off: 0, v1: 1, v2: 1, c1: 'DC', c2: 'DC', ch2: true, td: 1e-3, trig: 'rise', lvl: 0, xy: false, cch: 1,
-      cu: { y1: 2, y2: -2, x1: 1, x2: 6 }, t: 0, sw: 0, swPrev: 0 };
+      cu: { y1: 2, y2: -2, x1: 1, x2: 6 }, t: 0, sw: 0, swPrev: 0, c2src: 'rc', f2: 300, ph2: 0, U2: 3, dev: 'osz', fs: 10000, saved: null };
     const f = () => S.rng * S.fine;
     const ser = () => series(S.wave);
     const raw1 = t => S.U * wave1(S.wave, 2 * Math.PI * f() * t) + S.off;
     const raw2 = t => { const w = 2 * Math.PI * f(); let s = 0; for (const [n, b] of ser()) { const x = n * w * RC; s += b / Math.sqrt(1 + x * x) * Math.sin(n * w * t - Math.atan(x)); } return S.U * s + S.off; };
     const disp = (v, c) => c === 'GND' ? 0 : c === 'AC' ? v - S.off : v;
-    const ch1 = t => disp(raw1(t), S.c1), ch2 = t => disp(raw2(t), S.c2);
+    const gen2 = t => S.U2 * Math.sin(2 * Math.PI * S.f2 * t + S.ph2 * Math.PI / 180);
+    const ch1 = t => disp(raw1(t), S.c1), ch2 = t => S.c2src === 'gen' ? gen2(t) : disp(raw2(t), S.c2);
     function nextCross(t0) {
       if (S.trig === 'auto') return null;
       const T = 1 / f(), n = 500; let p = ch1(t0) - S.lvl;
@@ -150,13 +159,16 @@ export default {
     // Linienzüge in Div-Koordinaten (x 0…10, y −4…4)
     function traces() {
       if (S.xy) {
-        const T = 1 / f(), a = [], n = 400; for (let i = 0; i <= n; i++) { const t = S.t + T * i / n; a.push([5 + ch1(t) / S.v1, ch2(t) / S.v2]); }
+        let T = 1 / f(), n = 400;
+        if (S.ch2 && S.c2src === 'gen') { const r = S.f2 / f(); let per = 4 / Math.min(f(), S.f2); for (let q = 1; q <= 12; q++) { const p = Math.round(r * q); if (p > 0 && Math.abs(r * q - p) < 1e-6) { per = q / f(); break; } } T = per; n = 2000; }
+        const a = []; for (let i = 0; i <= n; i++) { const t = S.t + T * i / n; a.push([5 + ch1(t) / S.v1, ch2(t) / S.v2]); }
         return { t1: a, t2: [], frac: 1 };
       }
       const dur = sweepDur(), start = S.sw, frac = dur < 0.08 ? 1 : Math.max(0, Math.min(1, (S.t - start) / dur));
-      const st = frac === 0 ? S.swPrev : start, fr = frac === 0 ? 1 : frac, n = 600, t1 = [], t2 = [];
+      const st = frac === 0 ? S.swPrev : start, fr = frac === 0 ? 1 : frac, t1 = [], t2 = [];
+      const mwe = S.dev === 'mwe', n = mwe ? Math.min(2000, Math.max(2, Math.floor(dur * S.fs))) : 600;
       for (let i = 0; i <= n * fr; i++) { const t = st + dur * i / n; t1.push([10 * i / n, ch1(t) / S.v1]); if (S.ch2) t2.push([10 * i / n, ch2(t) / S.v2]); }
-      return { t1, t2, frac: fr };
+      return { t1, t2, frac: fr, dots: mwe && n <= 250, st, dur, n };
     }
 
     // --- Bedienung
@@ -171,9 +183,12 @@ export default {
     const segV1 = segmented({ value: 1, options: VDIVS.map(v => ({ value: v, label: `${fmt(v, v < 1 ? 1 : 0)}` })), onChange: v => { S.v1 = v; } });
     const segC1 = segmented({ value: 'DC', options: ['DC', 'AC', 'GND'].map(v => ({ value: v, label: v })), onChange: v => { S.c1 = v; } });
     const segV2 = segmented({ value: 1, options: VDIVS.map(v => ({ value: v, label: `${fmt(v, v < 1 ? 1 : 0)}` })), onChange: v => { S.v2 = v; } });
-    const segC2 = segmented({ value: 'on', options: [{ value: 'on', label: 'CH2 ein (U_C)' }, { value: 'off', label: 'CH2 aus' }], onChange: v => { S.ch2 = v === 'on'; } });
+    const segC2 = segmented({ value: 'rc', options: [{ value: 'rc', label: 'CH2: U_C am RC-Glied' }, { value: 'gen', label: 'CH2: Generator 2' }, { value: 'off', label: 'CH2 aus' }], onChange: v => { S.ch2 = v !== 'off'; if (v !== 'off') S.c2src = v; boxG2.hidden = v !== 'gen'; } });
+    const sF2 = slider({ label: 'Generator 2: Frequenz f₂', min: 10, max: 2000, step: 1, value: S.f2, unit: 'Hz', digits: 0, onInput: v => { S.f2 = v; } });
+    const sP2 = slider({ label: 'Generator 2: Phase φ₂', min: 0, max: 360, step: 1, value: 0, unit: '°', digits: 0, onInput: v => { S.ph2 = v; } });
+    const boxG2 = el('div', { hidden: true }, sF2, sP2, el('p', { class: 'muted', style: 'font-size:12.5px;margin:4px 0 0' }, 'Sinus, Û = 3 V. Im XY-Betrieb entstehen Lissajous-Figuren. Bei f₂ : f₁ = 1 : 1, 1 : 2, 2 : 3 … steht die Figur.'));
     gY.append(el('div', { class: 'ctl' }, el('label', { style: 'grid-column:1/-1' }, 'CH1 in V/Div · Kopplung'), el('div', { style: 'grid-column:1/-1' }, segV1), el('div', { style: 'grid-column:1/-1;margin-top:6px' }, segC1)),
-      el('div', { class: 'ctl' }, el('label', { style: 'grid-column:1/-1' }, 'CH2 in V/Div'), el('div', { style: 'grid-column:1/-1' }, segV2), el('div', { style: 'grid-column:1/-1;margin-top:6px' }, segC2)));
+      el('div', { class: 'ctl' }, el('label', { style: 'grid-column:1/-1' }, 'CH2 in V/Div'), el('div', { style: 'grid-column:1/-1' }, segV2), el('div', { style: 'grid-column:1/-1;margin-top:6px' }, segC2)), boxG2);
     const gX = group('Zeitablenkung und Trigger');
     const selT = selectBox({ label: 'Zeitablenkung', value: String(S.td), options: TDIVS.map(t => ({ value: String(t), label: tLabel(t) + '/Div' })), onChange: v => { S.td = +v; S.sw = S.t; } });
     const segTr = segmented({ value: 'rise', options: [{ value: 'auto', label: 'Auto (aus)' }, { value: 'rise', label: '↗ steigend' }, { value: 'fall', label: '↘ fallend' }], onChange: v => { S.trig = v; } });
@@ -187,7 +202,19 @@ export default {
       el('div', { class: 'bar' }, button('Periode und Amplitude übernehmen', () => takeTU(), 'btn small primary')),
       el('div', { class: 'bar' }, button('Phasenverschiebung übernehmen', () => takePh())),
       el('p', { class: 'muted', style: 'font-size:12.5px;margin:8px 0 0' }, 'Cursor im 2D-Aufbau mit der Maus verschieben.'));
-    controls.append(gG, gY, gX, gC);
+    const gD = group('Gerät');
+    const segD = segmented({ value: 'osz', options: [{ value: 'osz', label: 'Oszilloskop' }, { value: 'mwe', label: 'Messwerterfassung' }], onChange: v => { S.dev = v; boxM.hidden = v !== 'mwe'; } });
+    const segFs = segmented({ value: 10000, options: [{ value: 200, label: '200 /s' }, { value: 1000, label: '1 kHz' }, { value: 10000, label: '10 kHz' }, { value: 100000, label: '100 kHz' }], onChange: v => { S.fs = v; } });
+    const boxM = el('div', { hidden: true }, el('div', { class: 'ctl' }, el('label', { style: 'grid-column:1/-1' }, 'Abtastrate'), el('div', { style: 'grid-column:1/-1' }, segFs)),
+      el('div', { class: 'bar' }, button('Bild speichern (CSV)', () => saveRun(), 'btn small primary')),
+      el('p', { class: 'muted', style: 'font-size:12.5px;margin:4px 0 0' }, 'Die Messwerterfassung tastet die Spannung in festen Abständen ab. Ist die Abtastrate kleiner als 2·f, zeigt sie eine falsche, zu kleine Frequenz (Aliasing).'));
+    gD.append(el('div', { class: 'ctl' }, el('div', { style: 'grid-column:1/-1' }, segD)), boxM);
+    function saveRun() {
+      const tr = traces(); const rows2 = tr.t1.map((p, i) => ({ t: tr.st + tr.dur * i / tr.n, u1: p[1] * S.v1, u2: tr.t2[i] ? tr.t2[i][1] * S.v2 : '' }));
+      S.saved = { rows: rows2, fs: S.fs }; chSv.set([{ color: '#7dffb8', points: rows2.map(r => [(r.t - rows2[0].t) * 1000, r.u1]), name: 'CH1' }, ...(S.ch2 ? [{ color: '#ffd65a', points: rows2.map(r => [(r.t - rows2[0].t) * 1000, r.u2]), name: 'CH2' }] : [])]);
+      toast(`Gespeichert: ${rows2.length} Messwerte, Abtastrate ${fmt(S.fs, 0)} /s`);
+    }
+    controls.append(gD, gG, gY, gX, gC);
     const cDU = () => Math.abs(S.cu.y1 - S.cu.y2) * (S.cch === 1 ? S.v1 : S.v2), cDT = () => Math.abs(S.cu.x1 - S.cu.x2) * S.td;
 
     // --- Messwerte
@@ -199,6 +226,7 @@ export default {
     const tblP = dataTable([{ key: 'fg', label: 'f in Hz', digits: 1 }, { key: 'dt', label: 'Δt in ms', fmt: v => fmt(v * 1000, 3) }, { key: 'phi', label: 'φ in °', digits: 1 }], { onDelete: i => { phs.splice(i, 1); redraw(); } });
     const figF = el('div', { class: 'fig' }), figA = el('div', { class: 'fig' }), figP = el('div', { class: 'fig' });
     const chF = new Chart(figF, { xlabel: 'f Generator in Hz', ylabel: 'f = 1/T in Hz' }), chA = new Chart(figA, { xlabel: 'f in Hz', ylabel: 'Û_C / Û' }), chP = new Chart(figP, { xlabel: 'f in Hz', ylabel: 'φ in °' });
+    const figSv = el('div', { class: 'fig' }); const chSv = new Chart(figSv, { xlabel: 't in ms', ylabel: 'U in V' });
     const resF = el('div', { class: 'result' }), resA = el('div', { class: 'result' }), resP = el('div', { class: 'result' });
     messwerte.append(
       el('div', { class: 'data' },
@@ -210,7 +238,10 @@ export default {
         el('div', { class: 'chartbox' }, el('h4', {}, 'RC-Glied: Phasenverschiebung'), figP, resP,
           csvTools(() => ({ meta: ['Oszilloskop: Phasenverschiebung RC-Glied'], columns: [{ key: 'fg', label: 'f in Hz' }, { key: 'dt', label: 'dt in s' }, { key: 'phi', label: 'phi in Grad' }], rows: phs }), 'oszilloskop_phase')),
         el('div', {}, el('h4', { style: 'margin:0 0 8px' }, 'Phasenverschiebungen'), tblP)),
-      el('div', { style: 'height:14px' }), tbl);
+      el('div', { style: 'height:14px' }), tbl,
+      el('div', { style: 'height:14px' }),
+      el('div', { class: 'chartbox' }, el('h4', {}, 'Messwerterfassung: gespeichertes Bild'), figSv,
+        csvTools(() => ({ meta: ['Messwerterfassung', `Abtastrate ${S.saved?.fs ?? '-'} /s`], columns: [{ key: 't', label: 't in s' }, { key: 'u1', label: 'U1 in V' }, { key: 'u2', label: 'U2 in V' }], rows: S.saved?.rows || [] }), 'messwerterfassung')));
     const thA = x => 1 / Math.sqrt(1 + (2 * Math.PI * x * RC) ** 2), thP = x => Math.atan(2 * Math.PI * x * RC) * 180 / Math.PI;
     function redraw() {
       tbl.render(rows); tblP.render(phs);
@@ -261,6 +292,7 @@ export default {
         raf = requestAnimationFrame(frame);
         const tr = traces();
         q('oT1').setAttribute('d', path(tr.t1)); q('oT2').setAttribute('d', path(tr.t2));
+        q('oDots').innerHTML = tr.dots ? tr.t1.map(p => `<circle cx="${X(p[0]).toFixed(1)}" cy="${Y(p[1]).toFixed(1)}" r="2.6" fill="#c8ffe0"/>`).join('') + tr.t2.map(p => `<circle cx="${X(p[0]).toFixed(1)}" cy="${Y(p[1]).toFixed(1)}" r="2.6" fill="#ffe9a0"/>`).join('') : '';
         const slow = !S.xy && sweepDur() >= 0.08 && tr.frac < 1;
         if (slow) { const l = tr.t1.at(-1); q('oSpot').setAttribute('cx', X(l[0])); q('oSpot').setAttribute('cy', Y(l[1])); }
         q('oSpot').setAttribute('opacity', slow ? 1 : 0);
@@ -269,11 +301,12 @@ export default {
         q('oCur').setAttribute('opacity', S.xy ? 0 : 1);
         q('oCu1').setAttribute('stroke', S.cch === 1 ? '#ff9a7a' : '#ffd65a'); q('oCu2').setAttribute('stroke', S.cch === 1 ? '#ff9a7a' : '#ffd65a');
         q('oTrig').setAttribute('y1', Y(S.lvl / S.v1)); q('oTrig').setAttribute('y2', Y(S.lvl / S.v1)); q('oTrig').setAttribute('opacity', S.trig === 'auto' || S.xy ? 0 : 1);
-        q('oInfo').textContent = S.xy ? `XY · X: CH1 ${fmt(S.v1, 1)} V/Div · Y: CH2 ${fmt(S.v2, 1)} V/Div` : `CH1 ${fmt(S.v1, 1)} V/Div ${S.c1}   CH2 ${S.ch2 ? fmt(S.v2, 1) + ' V/Div' : 'aus'}   ${tLabel(S.td)}/Div`;
+        q('oInfo').textContent = (S.dev === 'mwe' ? 'Messwerterfassung · ' : '') + (S.xy ? `XY · X: CH1 ${fmt(S.v1, 1)} V/Div · Y: CH2 ${fmt(S.v2, 1)} V/Div` : `CH1 ${fmt(S.v1, 1)} V/Div ${S.c1}   CH2 ${S.ch2 ? fmt(S.v2, 1) + ' V/Div' : 'aus'}   ${tLabel(S.td)}/Div`);
         q('oRun').textContent = S.xy ? '' : S.trig === 'auto' ? 'kein Trigger' : nextCross(S.t) == null ? 'Pegel außerhalb: kein Trigger' : 'getriggert';
         q('oGf').textContent = f() >= 1000 ? `${fmt(f() / 1000, 3)} kHz` : `${fmt(f(), 1)} Hz`; q('oGu').textContent = `Û ${fmt(S.U, 1)} V`;
-        q('oGw').textContent = `${S.wave === 'sin' ? 'Sinus' : S.wave === 'rect' ? 'Rechteck' : 'Dreieck'}${S.off ? ` · Offset ${fmt(S.off, 1)} V` : ''}`;
-        q('oC2dot').setAttribute('opacity', S.ch2 ? 1 : 0.25); q('oC2lab').setAttribute('opacity', S.ch2 ? 1 : 0.25);
+        q('oGw').textContent = `${S.wave === 'sin' ? 'Sinus' : S.wave === 'rect' ? 'Rechteck' : 'Dreieck'} · U_eff = ${fmt(S.U / (S.wave === 'sin' ? Math.SQRT2 : S.wave === 'rect' ? 1 : Math.sqrt(3)), 2)} V${S.off ? ` · Offset ${fmt(S.off, 1)} V` : ''}${S.dev === 'mwe' ? ` · Abtastrate ${fmt(S.fs, 0)} /s` : ''}`;
+        q('oG2').textContent = S.ch2 && S.c2src === 'gen' ? `CH2 an Generator 2: ${fmt(S.f2, 0)} Hz, φ₂ = ${S.ph2}°` : '';
+        q('oC2dot').setAttribute('opacity', S.ch2 && S.c2src === 'rc' ? 1 : 0.25); q('oC2lab').setAttribute('opacity', S.ch2 ? 1 : 0.25);
         q('oDU').textContent = `ΔU = ${fmt(cDU(), 2)} V (CH${S.cch})`; q('oDT').textContent = `Δt = ${fmt(cDT() * 1000, 3)} ms`; q('oDF').textContent = `1/Δt = ${fmt(1 / Math.max(1e-9, cDT()), 1)} Hz`;
         q('oSet').textContent = S.trig === 'auto' ? 'Trigger aus' : `Trigger ${S.trig === 'rise' ? 'steigend' : 'fallend'} bei ${fmt(S.lvl, 1)} V`;
         const model = MM.model; q('oTube').setAttribute('opacity', model ? 1 : 0);
@@ -360,6 +393,6 @@ export default {
       slow += dt; if (slow > 0.2) { slow = 0; dU.set(`${fmt(cDU(), 2)} V`); dT.set(`${fmt(cDT() * 1000, 3)} ms`); }
     }
     raf = requestAnimationFrame(loop);
-    return { destroy() { cancelAnimationFrame(raf); host.destroy(); chF.destroy(); chA.destroy(); chP.destroy(); } };
+    return { destroy() { cancelAnimationFrame(raf); host.destroy(); chF.destroy(); chA.destroy(); chP.destroy(); chSv.destroy(); } };
   }
 };

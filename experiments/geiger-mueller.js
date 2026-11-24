@@ -14,7 +14,10 @@ const SRC = {
   sr: { name: 'Sr-90 (β)', A: 74e3, parts: [['b', 2]] },
   am: { name: 'Am-241 (α, γ)', A: 370e3, parts: [['a', 1], ['g', 0.36]] },
   co: { name: 'Co-60 (γ)', A: 74e3, parts: [['g', 2], ['b', 1]] },
-  ra: { name: 'Ra-226 (α, β, γ)', A: 3.3e3, parts: [['a', 4], ['b', 2], ['g', 2.2]] }
+  ra: { name: 'Ra-226 (α, β, γ)', A: 3.3e3, parts: [['a', 4], ['b', 2], ['g', 2.2]] },
+  ba: { name: 'Ba-137m (Isotopengenerator, γ)', A: 2.0e5, parts: [['g', 0.9], ['b', 0.08]], T12: 153 },
+  nuss: { name: 'Paranussmehl (Schale)', A: 30, parts: [['b', 1]] },
+  ziegel: { name: 'Ziegelstein (Bruchstück)', A: 60, parts: [['b', 1]] }
 };
 const PCOL = { a: '#ff8a7a', b: '#86dcff', g: '#c7b6ff', n: '#9aa0a6' };
 const omega = r => { const d = r + OFFSET; return 0.5 * (1 - d / Math.sqrt(d * d + WIN_R * WIN_R)); };
@@ -101,6 +104,8 @@ export default {
 <li><b>Abstandsgesetz:</b> Bei 500 V für Abstände von 2 cm bis 20 cm zählen. Die Nullrate abziehen und über 1/r² auftragen.</li>
 <li><b>Statistik:</b> Die Messreihe mit 100 Zählungen zu je 1 s starten. Häufigkeitsverteilung, Mittelwert und Standardabweichung mit der Poisson-Verteilung vergleichen.</li>
 <li>Mit Am-241 die Reichweite von α-Strahlung in Luft untersuchen.</li>
+<li><b>Halbwertszeit:</b> Ba-137m aus dem Isotopengenerator eluieren und sofort die Messreihe mit 10-s-Zählungen starten. Nullrate abziehen, Zerfallskurve auswerten.</li>
+<li>Paranussmehl und ein Ziegelbruchstück direkt vor das Fenster legen und 100 s zählen. Mit der Nullrate vergleichen.</li>
 </ol>
 <p><b>Strahlenschutz:</b> Präparate nur mit der Zange anfassen, Abstand halten, Aufenthaltsdauer kurz halten, nach dem Versuch zurück in den Tresor.</p>`,
     theorie: `
@@ -109,6 +114,12 @@ export default {
 <h3>Kennlinie und Totzeit</h3>
 <p>Unterhalb der Einsatzspannung entsteht keine zählbare Entladung. Darüber folgt ein Plateau, auf dem die Zählrate kaum von der Spannung abhängt. Bei zu hoher Spannung brennt eine Dauerentladung, die das Rohr zerstört. Nach jedem Impuls ist das Rohr etwa τ = 100 µs lang unempfindlich (Totzeit):</p>
 <span class="formula tex">n_\\text{gemessen} = \\frac{n}{1 + n\\, \\tau}</span>
+<h3>Bereiche der Kennlinie</h3>
+<p>Bei kleiner Spannung erreichen nicht alle Ionen die Elektroden (Rekombination). Danach folgt der Sättigungsbereich. Ab etwa 300 V vervielfachen die Elektronen sich durch Stoßionisation, die Impulshöhe ist proportional zur Primärionisation (Proportionalbereich). Im Auslösebereich (Plateau) löst jedes Teilchen eine Entladung längs des ganzen Drahts aus, alle Impulse sind gleich hoch. Darüber zündet eine Dauerentladung.</p>
+<h3>Halbwertszeit</h3>
+<p>Die Aktivität eines Präparats nimmt exponentiell ab. Nach der Halbwertszeit T½ ist sie auf die Hälfte gesunken:</p>
+<span class="formula tex">A(t) = A_0\\, e^{-\\lambda t} \\qquad T_{1/2} = \\frac{\\ln 2}{\\lambda}</span>
+<p>Ba-137m entsteht im Isotopengenerator aus Cs-137 und wird mit einer Lösung herausgespült (eluiert). Es hat T½ = 2,55 min.</p>
 <h3>Nullrate</h3>
 <p>Auch ohne Präparat zählt das Rohr Impulse: Höhenstrahlung und natürliche Radioaktivität der Umgebung. Sie wird von jeder Messung abgezogen.</p>
 <h3>Abstandsgesetz</h3>
@@ -127,37 +138,40 @@ export default {
 <table class="spec"><tbody>
 <tr><td>Zählrohr</td><td>Endfenster, Glimmerfenster 9 mm, Totzeit 100 µs, Einsatzspannung etwa 360 V, Plateau 400 … 600 V</td></tr>
 <tr><td>Zählgerät</td><td>0 … 700 V, Torzeit 1 · 10 · 60 · 100 s oder Dauerzählung, Lautsprecher</td></tr>
-<tr><td>Präparate</td><td>Sr-90 74 kBq, Am-241 370 kBq, Co-60 74 kBq, Ra-226 3,3 kBq</td></tr>
+<tr><td>Präparate</td><td>Sr-90 74 kBq, Am-241 370 kBq, Co-60 74 kBq, Ra-226 3,3 kBq, Isotopengenerator Cs-137/Ba-137m (Eluat etwa 200 kBq); natürliche Proben: Paranussmehl, Ziegel</td></tr>
 <tr><td>Schiene</td><td>Abstand Präparat–Fenster 1,5 … 30 cm</td></tr>
 <tr><td>Nullrate</td><td>etwa 0,4 Impulse je Sekunde</td></tr>
 </tbody></table>`,
     abi: `
 <details class="q"><summary>In 100 s werden ohne Präparat 38 Impulse gezählt, mit Präparat in 10 s 312 Impulse. Berechne die Zählrate des Präparats. <span class="op">AFB I</span></summary><p>n₀ = 0,38 s⁻¹, n = 31,2 s⁻¹, Präparat: n − n₀ ≈ 30,8 s⁻¹.</p></details>
 <details class="q"><summary>Begründe, warum man bei einer Zählung mit 100 Impulsen eine Unsicherheit von etwa 10 % angibt. <span class="op">AFB II</span></summary><p>Die Impulszahl ist Poisson-verteilt mit σ = √N = 10. Das sind 10 % von 100. Für 1 % Unsicherheit braucht man 10 000 Impulse.</p></details>
+<details class="q"><summary>Ein frisches Eluat liefert 600 Impulse in 10 s, nach 5,1 min noch 150 (Nullrate vernachlässigt). Bestimme T½. <span class="op">AFB II</span></summary><p>600 → 150 ist ein Viertel, also zwei Halbwertszeiten in 5,1 min. T½ ≈ 2,55 min.</p></details>
 <details class="q"><summary>Der Abstand wird von 4 cm auf 8 cm verdoppelt. Wie ändert sich die Zählrate (ohne Nullrate)? <span class="op">AFB I</span></summary><p>Sie sinkt nach dem Abstandsgesetz auf ein Viertel.</p></details>
 <details class="q"><summary>Mit Am-241 sinkt die Zählrate ab etwa 3,5 cm fast auf die Nullrate. Erkläre. <span class="op">AFB II</span></summary><p>α-Teilchen geben ihre Energie auf kurzer Strecke an die Luft ab. Ihre Reichweite liegt bei wenigen Zentimetern. Die schwache γ-Strahlung des Präparats wird nur selten registriert.</p></details>`
   },
 
   async mount({ stage, controls, messwerte, ui, Chart, csvTools, fit }) {
     const { el, group, slider, segmented, selectBox, check, button, fmt, dataTable, toast, display } = ui;
-    const S = { src: 'sr', r: 0.05, U: 500, gate: 10, run: false, N: 0, tc: 0, t: 0, fast: false, deadUntil: -1, ev: [], snd: true,
+    const S = { tElu: 0, src: 'sr', r: 0.05, U: 500, gate: 10, run: false, N: 0, tc: 0, t: 0, fast: false, deadUntil: -1, ev: [], snd: true,
       series: null, hist: [], last: null };
+    const actA = () => { const sc = SRC[S.src]; return sc.T12 ? sc.A * Math.pow(2, -(S.t - S.tElu) / sc.T12) : sc.A; };
     const trueRate = () => {
       const sc = SRC[S.src], om = omega(S.r); let n = N0;
-      for (const [k, y] of sc.parts) n += sc.A * y * om * effParts(k, S.r);
+      for (const [k, y] of sc.parts) n += actA() * y * om * effParts(k, S.r);
       return n * kenn(S.U) + discharge(S.U);
     };
     const kindPick = () => {
-      const sc = SRC[S.src], om = omega(S.r), w = [['n', N0]]; for (const [k, y] of sc.parts) w.push([k, sc.A * y * om * effParts(k, S.r)]);
+      const sc = SRC[S.src], om = omega(S.r), w = [['n', N0]]; for (const [k, y] of sc.parts) w.push([k, actA() * y * om * effParts(k, S.r)]);
       let s = w.reduce((a, b) => a + b[1], 0) * Math.random(); for (const [k, v] of w) { s -= v; if (s <= 0) return k; } return 'n';
     };
     // Ton
     let actx = null; const click = () => { if (!S.snd || !actx || actx.state !== 'running') return; try { const b = actx.createBuffer(1, 220, actx.sampleRate), d = b.getChannelData(0); for (let i = 0; i < 220; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / 30); const s = actx.createBufferSource(); s.buffer = b; const g = actx.createGain(); g.gain.value = 0.25; s.connect(g).connect(actx.destination); s.start(); } catch { /* ohne Ton */ } };
 
     const gP = group('Präparat und Abstand');
-    const selS = selectBox({ label: 'Präparat', value: 'sr', options: Object.entries(SRC).map(([k, v]) => ({ value: k, label: v.name })), onChange: v => { S.src = v; } });
+    const selS = selectBox({ label: 'Präparat', value: 'sr', options: Object.entries(SRC).map(([k, v]) => ({ value: k, label: v.name })), onChange: v => { S.src = v; if (v === 'ba') { S.tElu = S.t; toast('Ba-137m frisch aus dem Generator eluiert. Die Aktivität nimmt sofort ab.'); } bElu.hidden = v !== 'ba'; } });
+    const bElu = button('Neu eluieren (Ba-137m)', () => { S.tElu = S.t; toast('Frisch eluiert.'); }); bElu.hidden = true;
     const sR = slider({ label: 'Abstand r (Präparat–Fenster)', min: 1.5, max: 30, step: 0.5, value: 5, unit: 'cm', digits: 1, onInput: v => { S.r = v / 100; } });
-    gP.append(selS, sR);
+    gP.append(selS, sR, el('div', { class: 'bar' }, bElu));
     const gZ = group('Zählgerät', { led: true }); gZ.led(true);
     const sU = slider({ label: 'Zählrohrspannung U', min: 250, max: 650, step: 10, value: S.U, unit: 'V', digits: 0, onInput: v => { S.U = v; } });
     const selG = selectBox({ label: 'Torzeit', value: '10', options: [['1', '1 s'], ['10', '10 s'], ['60', '60 s'], ['100', '100 s'], ['0', 'Dauerzählung']].map(([v, l]) => ({ value: v, label: l })), onChange: v => { S.gate = +v; } });
@@ -168,12 +182,18 @@ export default {
     const gM = group('Messung');
     const dN = display('Impulse N'), dRate = display('Zählrate n = N/t'), dU2 = display('Unsicherheit ±√N');
     gM.append(dN, dRate, dU2, el('div', { class: 'bar' }, button('Messwert übernehmen', () => take(), 'btn small primary')),
-      el('div', { class: 'bar' }, button('Messreihe: 100 × 1 s', () => startSeries())));
+      el('div', { class: 'bar' }, button('Messreihe: 100 × 1 s', () => startSeries())),
+      el('div', { class: 'bar' }, button('Messreihe Halbwertszeit: 10-s-Zählungen', () => startHwz())));
     controls.append(gP, gZ, gM);
     controls.addEventListener('pointerdown', () => { try { actx ??= new AudioContext(); actx.resume(); } catch { /* ohne Ton */ } });
     function start() { if (S.series) return; S.N = 0; S.tc = 0; S.run = true; gZ.led(true); try { actx ??= new AudioContext(); actx.resume(); } catch { /* */ } }
     function stop() { S.run = false; if (S.series) { S.series = null; toast('Messreihe abgebrochen.'); } }
-    function startSeries() { if (S.U > 600) { toast('Spannung zuerst ins Plateau stellen.'); return; } S.series = { k: 0, counts: [], cfg: { src: S.src, r: S.r, U: S.U } }; S.N = 0; S.tc = 0; S.run = true; toast('Messreihe läuft im Zeitraffer (100 × 1 s).'); }
+    function startHwz() {
+      if (S.src !== 'ba') { toast('Dafür das kurzlebige Präparat Ba-137m wählen.'); return; }
+      if (S.U > 600 || S.U < 400) { toast('Spannung zuerst ins Plateau stellen.'); return; }
+      S.series = { k: 0, counts: [], hwz: true, gate: 10, n: 60, t0: S.t - S.tElu }; S.N = 0; S.tc = 0; S.run = true; S.decay = []; toast('Halbwertszeit: 60 Zählungen zu je 10 s im Zeitraffer.');
+    }
+    function startSeries() { if (S.U > 600) { toast('Spannung zuerst ins Plateau stellen.'); return; } S.series = { k: 0, counts: [], gate: 1, n: 100, cfg: { src: S.src, r: S.r, U: S.U } }; S.N = 0; S.tc = 0; S.run = true; toast('Messreihe läuft im Zeitraffer (100 × 1 s).'); }
 
     const rows = [];
     const tbl = dataTable([
@@ -182,12 +202,16 @@ export default {
     ], { onDelete: i => { rows.splice(i, 1); redraw(); } });
     const figK = el('div', { class: 'fig' }), figA = el('div', { class: 'fig' }), figH = el('div', { class: 'fig' });
     const chK = new Chart(figK, { xlabel: 'U in V', ylabel: 'n in 1/s' }), chA = new Chart(figA, { xlabel: '1/r² in 1/cm²', ylabel: 'n − n₀ in 1/s' }), chH = new Chart(figH, { xlabel: 'Impulse je 1 s', ylabel: 'Häufigkeit' });
+    const figZ = el('div', { class: 'fig' }), resZ = el('div', { class: 'result' }); const chZ = new Chart(figZ, { xlabel: 't in s (nach dem Eluieren)', ylabel: 'n − n₀ in 1/s' });
     const resK = el('div', { class: 'result' }), resA = el('div', { class: 'result' }), resH = el('div', { class: 'result' });
     messwerte.append(
       el('div', { class: 'data' },
         el('div', { class: 'chartbox' }, el('h4', {}, 'Zählrohrkennlinie'), figK, resK,
           csvTools(() => ({ meta: ['Geiger-Mueller-Zaehlrohr'], columns: [{ key: 'srcN', label: 'Praeparat' }, { key: 'U', label: 'U in V' }, { key: 'r', label: 'r in m' }, { key: 't', label: 't in s' }, { key: 'N', label: 'N' }, { key: 'n', label: 'n in 1/s' }], rows }), 'zaehlrohr_messreihe')),
         el('div', { class: 'chartbox' }, el('h4', {}, 'Abstandsgesetz'), figA, resA)),
+      el('div', { style: 'height:14px' }),
+      el('div', { class: 'chartbox' }, el('h4', {}, 'Halbwertszeit: Zerfallskurve von Ba-137m (10-s-Zählungen)'), figZ, resZ,
+        csvTools(() => ({ meta: ['Ba-137m, Zaehlungen je 10 s, t = Mitte des Zaehlintervalls nach dem Eluieren'], columns: [{ key: 't', label: 't in s' }, { key: 'N', label: 'N in 10 s' }], rows: (S.decay || []).map(([t, N]) => ({ t, N })) }), 'zaehlrohr_halbwertszeit')),
       el('div', { style: 'height:14px' }),
       el('div', { class: 'chartbox' }, el('h4', {}, 'Häufigkeitsverteilung (100 Zählungen à 1 s)'), figH, resH,
         csvTools(() => ({ meta: ['Haeufigkeitsverteilung, Torzeit 1 s'], columns: [{ key: 'i', label: 'Nr' }, { key: 'N', label: 'N' }], rows: S.hist.map((N, i) => ({ i: i + 1, N })) }), 'zaehlrohr_statistik')),
@@ -206,6 +230,10 @@ export default {
         if (f) { fa.push({ f: f.f, color: cols[i % 5] }); ta += `<div><span>${SRC[s].name.split(' ')[0]}: Ursprungsgerade (r ≥ 3 cm)</span><br><b>Steigung ${fmt(f.a, 1)} cm²/s</b></div>`; }
       }
       chA.set(sa, fa); resA.innerHTML = (n0() == null ? '<span>Nullrate noch nicht gemessen, gerechnet mit 0,4 /s. </span>' : `<span>Nullrate n₀ = ${fmt(n0(), 2)} /s abgezogen. </span>`) + (ta || '<span>Bei mehreren Abständen messen.</span>');
+      { const d = (S.decay || []).map(([t, N]) => [t, N / 10 - (n0() ?? N0)]); const pos = d.filter(p => p[1] > 0.05);
+        const e = pos.length >= 4 ? fit.expDecayFit(pos.map(p => p[0]), pos.map(p => p[1])) : null;
+        chZ.set([{ color: '#c7b6ff', mode: 'dot', points: d }], e ? [{ f: e.f, color: '#ffd27a' }] : []);
+        resZ.innerHTML = e ? `<div><span>Exponentialfit n = n(0)·e^(−t/τ)</span><br><b>τ = ${fmt(e.tau, 0)} s → T½ = τ·ln 2 = ${fmt(e.tau * Math.LN2, 0)} s</b> <span>(Literatur 153 s)</span></div>` : '<span>Ba-137m wählen, frisch eluieren, dann die Messreihe Halbwertszeit starten.</span>'; }
       if (S.hist.length) {
         const h = S.hist, mu = h.reduce((a, b) => a + b, 0) / h.length, sd = Math.sqrt(h.reduce((a, b) => a + (b - mu) ** 2, 0) / (h.length - 1));
         const lo = Math.max(0, Math.floor(mu - 4 * Math.sqrt(mu) - 1)), hi = Math.ceil(mu + 4 * Math.sqrt(mu) + 1), step = Math.max(1, Math.round((hi - lo) / 30));
@@ -243,7 +271,7 @@ export default {
         q('gN').textContent = String(S.N); q('gT').textContent = `${fmt(S.tc, 1)} s`; q('gU').textContent = `${S.U} V`;
         const lastEv = S.ev.length ? S.ev[S.ev.length - 1].w : -1;
         q('gLed').setAttribute('fill', now - lastEv < 0.05 ? '#ff4a2a' : '#3a1410');
-        q('gState').textContent = S.series ? `Messreihe: Zählung ${S.series.k + 1} von 100` : S.run ? (S.gate ? `zählt … (Torzeit ${S.gate} s)` : 'Dauerzählung läuft') : 'bereit';
+        q('gState').textContent = S.series ? `Messreihe: Zählung ${S.series.k + 1} von ${S.series.n}` : S.run ? (S.gate ? `zählt … (Torzeit ${S.gate} s)` : 'Dauerzählung läuft') : 'bereit';
         q('gWarn').textContent = S.U > 600 ? '⚠ Dauerentladung: Spannung sofort senken' : S.U < 360 ? 'Spannung unter der Einsatzspannung' : '';
         q('gL1').textContent = `n = ${S.tc > 0 ? fmt(S.N / S.tc, 2) : '–'} /s`; q('gL2').textContent = `±√N = ±${fmt(Math.sqrt(S.N), 0)}`;
         q('gMod').setAttribute('opacity', model ? 1 : 0);
@@ -330,21 +358,22 @@ export default {
     function loop(now) {
       raf = requestAnimationFrame(loop);
       const dtR = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
-      const sp = S.series ? 20 : S.fast ? 10 : 1, dt = dtR * sp, rate = trueRate();
+      const sp = S.series ? (S.series.hwz ? 40 : 20) : S.fast ? 10 : 1, dt = dtR * sp, rate = trueRate();
       let k = 0; { const lam = rate * dt; if (lam < 30) { let p = Math.exp(-lam), c = p, u = Math.random(); while (u > c) { k++; p *= lam / k; c += p; } } else k = Math.max(0, Math.round(lam + Math.sqrt(lam) * (Math.random() * 2 - 1) * 1.7)); }
       const times = Array.from({ length: k }, () => S.t + Math.random() * dt).sort((a, b) => a - b);
       const wall = performance.now() / 1000; audioN = 0;
       for (const t of times) {
         if (t < S.deadUntil) continue; S.deadUntil = t + TAU;
-        const counting = S.run && (S.gate === 0 || S.tc + (t - S.t) < (S.series ? 1 : S.gate));
+        const counting = S.run && (S.gate === 0 || S.tc + (t - S.t) < (S.series ? S.series.gate : S.gate));
         if (counting || !S.run) { if (S.run) S.N++; if (S.ev.length < 400 && Math.random() < Math.min(1, 30 / Math.max(1, rate * sp) * sp)) S.ev.push({ w: wall + (t - S.t) / sp, k: kindPick(), dx: Math.random(), dy: (Math.random() * 2 - 1) * 9 }); if (audioN++ < 3 && dtR > 0) click(); }
       }
       S.t += dt;
       if (S.run) {
-        S.tc += dt; const g = S.series ? 1 : S.gate;
+        S.tc += dt; const g = S.series ? S.series.gate : S.gate;
         if (g && S.tc >= g) {
           S.tc = g;
-          if (S.series) { S.series.counts.push(S.N); S.series.k++; S.N = 0; S.tc = 0; if (S.series.k >= 100) { S.hist = S.series.counts; S.series = null; S.run = false; redraw(); toast('Messreihe fertig. Verteilung unter „Messwerte“.'); } }
+          if (S.series?.hwz) { S.decay.push([S.t - S.tElu - g / 2, S.N]); S.series.k++; S.N = 0; S.tc = 0; redraw(); if (S.series.k >= S.series.n) { S.series = null; S.run = false; toast('Messreihe fertig. Zerfallskurve unter „Messwerte“.'); } }
+          else if (S.series) { S.series.counts.push(S.N); S.series.k++; S.N = 0; S.tc = 0; if (S.series.k >= 100) { S.hist = S.series.counts; S.series = null; S.run = false; redraw(); toast('Messreihe fertig. Verteilung unter „Messwerte“.'); } }
           else { S.run = false; }
         }
       }
@@ -352,6 +381,6 @@ export default {
       slow += dtR; if (slow > 0.2) { slow = 0; dN.set(String(S.N)); dRate.set(S.tc > 0 ? `${fmt(S.N / S.tc, 2)} /s` : '–'); dU2.set(`± ${fmt(Math.sqrt(S.N), 0)}`); }
     }
     raf = requestAnimationFrame(loop);
-    return { destroy() { cancelAnimationFrame(raf); host.destroy(); chK.destroy(); chA.destroy(); chH.destroy(); } };
+    return { destroy() { cancelAnimationFrame(raf); host.destroy(); chK.destroy(); chA.destroy(); chH.destroy(); chZ.destroy(); } };
   }
 };

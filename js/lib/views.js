@@ -54,6 +54,7 @@ export function viewHost(stage, { id, views, initial = '3d', model = false, mode
     M, ready,
     get kind() { return kind; },
     onModel(f) { listeners.add(f); f(M.model); return () => listeners.delete(f); },
+    refresh() { return show(kind); },
     destroy() { token++; try { cur?.destroy?.(); } catch (e) { console.error(e); } cur = null; }
   };
 }
