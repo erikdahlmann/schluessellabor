@@ -85,15 +85,15 @@ export const EXPERIMENTS = [
     teaser: 'Bremsspektrum und charakteristische Linien, Bragg-Reflexion am Kristall.' },
   { id: 'geiger-mueller', field: 'strahlung', title: 'Geiger-Müller-Zählrohr', tech: '2d', status: 'bereit',
     teaser: 'Zählrate, Nullrate und statistische Schwankung beim radioaktiven Zerfall.' },
-  { id: 'flammenfaerbung', field: 'strahlung', title: 'Flammenfärbung', tech: '2d', status: 'geplant',
+  { id: 'flammenfaerbung', field: 'strahlung', title: 'Flammenfärbung', tech: '2d', status: 'bereit',
     teaser: 'Metallsalze färben die Flamme charakteristisch – Spektroskopie im Alltag.' },
   { id: 'linienspektren', field: 'strahlung', title: 'Linienspektren bzw. Spektralanalyse', short: 'Linienspektren', tech: '2d', status: 'bereit',
     teaser: 'Spektrallampen am Gitter – Energieniveaus aus Spektrallinien.' },
   { id: 'franck-hertz', field: 'strahlung', title: 'Franck-Hertz-Versuch', tech: '2d', status: 'bereit',
     teaser: 'Diskrete Energieabgabe von Elektronen an Quecksilber- oder Neonatome.' },
-  { id: 'sonnenspektrum', field: 'strahlung', title: 'Sonnenspektrum, Fraunhofer’sche Linien', short: 'Sonnenspektrum', tech: '2d', status: 'geplant',
+  { id: 'sonnenspektrum', field: 'strahlung', title: 'Sonnenspektrum, Fraunhofer’sche Linien', short: 'Sonnenspektrum', tech: '2d', status: 'bereit',
     teaser: 'Dunkle Absorptionslinien verraten die Elemente der Sonnenatmosphäre.' },
-  { id: 'absorption', field: 'strahlung', title: 'Absorptionsexperimente', tech: '2d', status: 'geplant',
+  { id: 'absorption', field: 'strahlung', title: 'Absorptionsexperimente', tech: '2d', status: 'bereit',
     teaser: 'Resonanzabsorption (Natriumflamme) und Absorption ionisierender Strahlung.' }
 ];
 
