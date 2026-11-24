@@ -53,7 +53,7 @@ export const EXPERIMENTS = [
     teaser: 'Scharfe Maxima am optischen Gitter, Spektren weißen Lichts.' },
   { id: 'millikan', field: 'wellen-felder', title: 'Millikan-Versuch', tech: '3d', status: 'bereit',
     teaser: 'Schwebende Öltröpfchen im Kondensatorfeld – die Quantelung der Ladung.' },
-  { id: 'zyklotron', field: 'wellen-felder', title: 'Zyklotron', tech: '2d', status: 'geplant',
+  { id: 'zyklotron', field: 'wellen-felder', title: 'Zyklotron', tech: '2d', status: 'bereit',
     teaser: 'Teilchenbeschleunigung durch Wechselfeld und Magnetfeld (Modellexperiment).' },
 
   // --- Quantenobjekte -------------------------------------------------------
@@ -65,11 +65,11 @@ export const EXPERIMENTS = [
   // --- Elektrodynamik -------------------------------------------------------
   { id: 'leiterschaukel', field: 'elektrodynamik', title: 'Leiterschaukel', tech: '3d', status: 'bereit',
     teaser: 'Lorentzkraft auf einen stromdurchflossenen Leiter im Hufeisenmagneten.' },
-  { id: 'leiterschleife', field: 'elektrodynamik', title: 'Leiterschleife', tech: '3d', status: 'geplant',
+  { id: 'leiterschleife', field: 'elektrodynamik', title: 'Leiterschleife', tech: '3d', status: 'bereit',
     teaser: 'Induktionsspannung bei Bewegung einer Leiterschleife im Magnetfeld.' },
   { id: 'transformator', field: 'elektrodynamik', title: 'Transformator', tech: '3d', status: 'bereit',
     teaser: 'Spannungs- und Stromübersetzung, belasteter und unbelasteter Trafo.' },
-  { id: 'freileitung', field: 'elektrodynamik', title: 'Modellexperiment zu Freileitungen', short: 'Freileitung', tech: '2d', status: 'geplant',
+  { id: 'freileitung', field: 'elektrodynamik', title: 'Modellexperiment zu Freileitungen', short: 'Freileitung', tech: '2d', status: 'bereit',
     teaser: 'Energieübertragung mit und ohne Hochspannung – Leitungsverluste im Modell.' },
   { id: 'kondensator', field: 'elektrodynamik', title: 'Auf- und Entladevorgang bei Kondensatoren', short: 'Kondensator', tech: '2d', status: 'bereit',
     teaser: 'RC-Glied mit Messwerterfassung: Zeitkonstante, Ladung und Kapazität bestimmen.' },
