@@ -272,7 +272,7 @@ export default {
       const lab = await createLab(box, { cam: [0.12, 0.45, 0.72], target: [0.02, 0.15, 0], table: [1.8, 1.2], bloom: [0.85, 0.45, 0.82], room: 0.45, minDist: 0.15, maxDist: 2.4, fov: 36 });
       const { THREE, scene } = lab; const M = mats(THREE);
       box.insertAdjacentHTML('beforeend', '<div class="hint">Drehen: ziehen · Zoom: Mausrad · Röntgenstrahlen sind unsichtbar (Modellansicht zeigt sie)</div>');
-      const housing = new THREE.MeshStandardMaterial({ color: 0xc9cbc8, roughness: 0.5, metalness: 0.2 });
+      const housing = new THREE.MeshStandardMaterial({ color: 0xa3a6a3, roughness: 0.55, metalness: 0.2 });
       const bx = (w, h, d2, x, y, z, m = housing) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d2), m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; scene.add(o); return o; };
       bx(0.62, 0.02, 0.36, 0, 0.01, 0); bx(0.62, 0.02, 0.36, 0, 0.33, 0); bx(0.02, 0.32, 0.36, -0.3, 0.17, 0); bx(0.02, 0.32, 0.36, 0.3, 0.17, 0); bx(0.62, 0.32, 0.02, 0, 0.17, -0.17);
       bx(0.2, 0.32, 0.02, 0.4, 0.17, 0.0, M.housing);

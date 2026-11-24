@@ -77,7 +77,7 @@ export async function createLab(stage, opts = {}) {
   // Postprocessing (Bloom für glühende Kathoden, Elektronenstrahl, LEDs)
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), o.bloom[0], o.bloom[1], o.bloom[2]);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), o.bloom[0] * 0.75, o.bloom[1], Math.min(0.95, o.bloom[2] + 0.04));
   composer.addPass(bloom); composer.addPass(new OutputPass());
 
   function resize() {
@@ -87,8 +87,8 @@ export async function createLab(stage, opts = {}) {
   const ro = new ResizeObserver(resize); ro.observe(stage); resize();
 
   function setRoom(level) { // 0 = abgedunkelt … 1 = volles Raumlicht
-    hemi.intensity = 0.08 + 0.55 * level; key.intensity = 2 + 17 * level; rim.intensity = 0.08 + 0.45 * level;
-    scene.environmentIntensity = 0.06 + 0.4 * level; renderer.toneMappingExposure = 0.85 + 0.25 * level;
+    hemi.intensity = 0.08 + 0.44 * level; key.intensity = 2 + 12.5 * level; rim.intensity = 0.08 + 0.35 * level;
+    scene.environmentIntensity = 0.06 + 0.3 * level; renderer.toneMappingExposure = 0.85 + 0.12 * level;
   }
   setRoom(o.room);
 

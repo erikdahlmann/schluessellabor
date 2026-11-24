@@ -3,7 +3,7 @@
 Die Schlüsselexperimente des Grundkurses Physik (Kernlehrplan NRW, gymnasiale Oberstufe) als virtuelle Versuchsaufbauten.
 Live: https://dm-pkg.de/schluessellabor/
 
-Durchführbar: Federpendel, Wellenwanne, Fadenstrahlrohr, Doppelspalt, Gitter, Millikan-Versuch, Zyklotron (Modellexperiment), Photoeffekt, Elektronen-Doppelspalt, Kondensator, Leiterschaukel, Leiterschleife, Transformator, Freileitung (Modellexperiment), Generator, Röntgenspektren, Linienspektren (H, He, Na, Hg, unbekannte Lampe X) und Franck-Hertz-Versuch (Hg und Ne). Jeder Versuch hat einen 2D- und einen 3D-Aufbau sowie eine Modellansicht (Feldlinien, Elektronen, Photonen, Kräfte, Energie). Die übrigen Versuche sind angelegt.
+Durchführbar: Federpendel, Wellenwanne, Fadenstrahlrohr, Doppelspalt, Gitter, Millikan-Versuch, Zyklotron (Modellexperiment), Photoeffekt, Elektronen-Doppelspalt, Kondensator, Leiterschaukel, Leiterschleife, Transformator, Freileitung (Modellexperiment), Oszilloskop, Generator, Thomson-Ring, Röntgenspektren, Geiger-Müller-Zählrohr, Linienspektren (H, He, Na, Hg, unbekannte Lampe X) und Franck-Hertz-Versuch (Hg und Ne). Jeder Versuch hat einen 2D- und einen 3D-Aufbau sowie eine Modellansicht (Feldlinien, Elektronen, Photonen, Kräfte, Energie). Die übrigen Versuche sind angelegt.
 
 ## Aufbau
 

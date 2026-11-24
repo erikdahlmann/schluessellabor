@@ -376,7 +376,7 @@ export default {
       const glassB = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.004, 0.4), new THREE.MeshPhysicalMaterial({ color: 0xcfe6ee, transparent: true, opacity: 0.25, roughness: 0.05 })); glassB.position.y = YT - 0.008; scene.add(glassB);
       const wg = new THREE.PlaneGeometry(0.6, 0.4, SX - 1, SY - 1); wg.rotateX(-Math.PI / 2);
       const colors = new Float32Array(SX * SY * 3); wg.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-      const waterMat = new THREE.MeshPhysicalMaterial({ color: 0x5f9ab8, roughness: 0.06, metalness: 0.0, transparent: true, opacity: 0.78, clearcoat: 1, clearcoatRoughness: 0.05 });
+      const waterMat = new THREE.MeshPhysicalMaterial({ color: 0x4a7f99, roughness: 0.08, metalness: 0.0, transparent: true, opacity: 0.8, clearcoat: 0.6, clearcoatRoughness: 0.08 });
       const heatMat = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false });
       const water = new THREE.Mesh(wg, waterMat); water.position.y = YT; scene.add(water);
       const pos = wg.attributes.position;
@@ -386,7 +386,7 @@ export default {
       const lampH = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, 0.06, 24), M.housing); lampH.position.set(0, 0.85, 0); scene.add(lampH);
       const lampPole = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.85, 12), al); lampPole.position.set(-0.36, 0.425, -0.22); scene.add(lampPole);
       const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.45, 12), al); arm.rotation.z = Math.PI / 2; arm.rotation.y = -0.55; arm.position.set(-0.18, 0.88, -0.11); scene.add(arm);
-      const spot = new THREE.SpotLight(0xfff4e0, 6, 2, 0.6, 0.5, 1.5); spot.position.set(0, 0.82, 0); spot.target.position.set(0, 0, 0); scene.add(spot, spot.target);
+      const spot = new THREE.SpotLight(0xfff4e0, 2.8, 2, 0.6, 0.5, 1.5); spot.position.set(0, 0.82, 0); spot.target.position.set(0, 0, 0); scene.add(spot, spot.target);
       const objG = new THREE.Group(); scene.add(objG);
       const dark = new THREE.MeshStandardMaterial({ color: 0x3a3f44, roughness: 0.6 });
       const P = (x, y) => new THREE.Vector3(x / 100, YT, -y / 100);
